@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-11-01
+
+### Added
+
+- Public landing page with a live board preview, feature highlights and a "How it works" walkthrough of the sprint process.
+- Footer with social links and a "Get in touch" contact form delivered by email via FormSubmit.
+- Privacy, Terms and Security pages, an illustrative system status page and a custom 404 page.
+- DevFlow logo and app icons.
+- Project README.
+
+### Removed
+
+- `create-next-app` placeholder page, favicon and assets.
+
 ## [0.3.0] - 2026-11-01
 
 ### Added
@@ -36,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/JohnReySeguma/dev-flow/releases/tag/v0.1.0
