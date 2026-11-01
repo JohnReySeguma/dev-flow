@@ -5,6 +5,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-01
+
+### Added
+
+- Domain model for projects, categorised workflow statuses, sprints and issues, with seed data generated relative to the current date.
+- Client store persisted to `localStorage`, with actions for issues, sprint lifecycle (create, start, complete with carry-over) and workflow editing.
+- Project routes under `/projects/[key]` with a shared shell, ⌘K jump-to-issue, issue detail sheet and create-issue dialog.
+- Sprint board showing the active sprint in the project's workflow columns: drag-and-drop, filters, grouping, display options, quick add, column rename/reorder/delete and "Add column".
+- Backlog and sprint planning with drag-and-drop ranking, start/edit/delete sprint.
+- Reports: burndown, velocity and sprint history.
+- Project settings: general details, workflow editor and project deletion.
+
 ## [0.1.0] - 2026-11-01
 
 ### Added
@@ -14,4 +26,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[0.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/JohnReySeguma/dev-flow/releases/tag/v0.1.0
