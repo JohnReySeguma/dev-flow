@@ -84,6 +84,52 @@ npm run lint
 
 Edit [`lib/site.ts`](lib/site.ts) to set your social profile URLs and the inbox that receives contact-form messages. FormSubmit sends a one-time activation email on the first submission; confirm it to start receiving messages.
 
+## Connecting to the API
+
+DevFlow runs in one of two modes, chosen by a single variable:
+
+| `NEXT_PUBLIC_API_URL` | Mode | Behaviour |
+| --- | --- | --- |
+| empty (default) | **Demo** | Everything runs in the browser on sample data in `localStorage`; no request reaches a server. |
+| `http://localhost:4000/api/v1` | **API** | The app talks to the [DevFlow API](https://github.com/JohnReySeguma/dev-flow-be). |
+
+1. Start the API (from the API repo, with Docker Desktop running):
+
+   ```bash
+   cd ../DevFlow-be
+   docker compose up -d
+   curl http://localhost:4000/api/v1/health/ready   # 200 when ready
+   ```
+
+2. Point the frontend at it and start it **on port 3000**. The API only accepts browser requests from `http://localhost:3000`.
+
+   ```bash
+   cp .env.example .env.local   # then set NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+   npm run dev
+   ```
+
+Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next build` starts, so **restart the dev server after changing the variable**. Never put secrets in a `NEXT_PUBLIC_*` variable: they are visible in the browser.
+
+**What API mode connects today:** the sign-in and sign-up pages read `GET /config` and show only the OAuth providers the server enables (none if the API is unreachable; email sign-in always stays available). Everything else still uses the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+
+### API code
+
+All API access lives in [`lib/api/`](lib/api/):
+
+| File | Purpose |
+| --- | --- |
+| `config.ts` | The only reader of `NEXT_PUBLIC_API_URL`; `isApiMode()` |
+| `client.ts` | `apiFetch()`: JSON, `credentials: "include"`, typed errors |
+| `errors.ts` | `ApiError`, `NetworkError`, and a message for every API error code |
+| `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
+| `types.ts` | Readable names for the generated types |
+
+The types are generated from the API's spec at tag **`v1.0.1`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. The API is final, so regenerate only when a later API release changes its spec: update the tag in the `api:types` script, then run
+
+```bash
+npm run api:types
+```
+
 ## Versioning & workflow
 
 This repository follows a lightweight, release-oriented Git workflow:
