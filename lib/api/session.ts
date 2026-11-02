@@ -11,7 +11,8 @@ export type SessionState =
   | { status: "demo" }
   | { status: "loading" }
   | { status: "signed-in"; user: UserProfile; workspace: AuthMe["workspace"] }
-  | { status: "signed-out" }
+  /** `logout`: the user asked to leave; `expired`: the API reported the session gone (or there never was one). */
+  | { status: "signed-out"; reason: "logout" | "expired" }
   /** The session check failed for another reason (API unreachable, rate limited, server error). */
   | { status: "error"; error: unknown };
 
@@ -32,7 +33,7 @@ function signedIn(me: AuthMe): SessionState {
 }
 
 // Any request (or refresh) that learns the session is gone flips the whole app to signed out.
-if (isApiMode()) onSignedOut(() => publish({ status: "signed-out" }));
+if (isApiMode()) onSignedOut(() => publish({ status: "signed-out", reason: "expired" }));
 
 /** `GET /auth/me`, deduplicated. Safe to call repeatedly, e.g. from a "Try again" button. */
 export function checkSession(): Promise<void> {
@@ -66,13 +67,13 @@ export async function signOut(): Promise<void> {
   try {
     await logout();
   } finally {
-    publish({ status: "signed-out" });
+    publish({ status: "signed-out", reason: "logout" });
   }
 }
 
 /** The API already ended every session (e.g. after a password reset); forget this tab's one too. */
 export function forgetSession() {
-  if (isApiMode()) publish({ status: "signed-out" });
+  if (isApiMode()) publish({ status: "signed-out", reason: "expired" });
 }
 
 /** Keeps the shell (sidebar, header) in step after the profile is saved. */
