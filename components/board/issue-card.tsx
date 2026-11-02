@@ -24,9 +24,11 @@ type IssueCardProps = {
   onOpen: (id: string) => void;
   onDragStart: (event: DragEvent<HTMLElement>, id: string) => void;
   onDragEnd: () => void;
+  /** Viewers can open cards but not move them. */
+  canDrag?: boolean;
 };
 
-export function IssueCard({ issue, isDone, display, isDragging, onOpen, onDragStart, onDragEnd }: IssueCardProps) {
+export function IssueCard({ issue, isDone, display, isDragging, onOpen, onDragStart, onDragEnd, canDrag = true }: IssueCardProps) {
   const now = useNow();
   const assignee = issue.assigneeId ? MEMBERS_BY_ID[issue.assigneeId] : null;
   const due = issue.dueAt && !isDone ? dueLabel(issue.dueAt, now) : null;
@@ -35,8 +37,8 @@ export function IssueCard({ issue, isDone, display, isDragging, onOpen, onDragSt
   return (
     <article
       tabIndex={0}
-      draggable
-      aria-roledescription="Draggable issue"
+      draggable={canDrag}
+      aria-roledescription={canDrag ? "Draggable issue" : undefined}
       aria-label={`${issue.id}: ${issue.title}`}
       onClick={() => onOpen(issue.id)}
       onKeyDown={(e) => {
@@ -45,7 +47,7 @@ export function IssueCard({ issue, isDone, display, isDragging, onOpen, onDragSt
           onOpen(issue.id);
         }
       }}
-      onDragStart={(e) => onDragStart(e, issue.id)}
+      onDragStart={(e) => canDrag && onDragStart(e, issue.id)}
       onDragEnd={onDragEnd}
       className={cn(
         "group animate-card-in relative cursor-pointer rounded-lg border border-zinc-800 bg-elevated outline-none",

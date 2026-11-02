@@ -7,6 +7,7 @@ import { StatusCategoryIcon } from "@/components/board/kanban-column";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Section } from "@/components/ui/section";
+import { usePermissions } from "@/lib/api/permissions";
 import { cannotDeleteStatusReason } from "@/lib/tracker/selectors";
 import {
   addStatus,
@@ -22,18 +23,20 @@ import { cn } from "@/lib/utils";
 import { useProject } from "./project-context";
 
 export function ProjectSettings() {
+  // Members may rename projects; only admins edit the workflow or delete the project.
+  const { canWrite, canAdmin } = usePermissions();
   return (
     <main className="scroll-thin min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
-        <GeneralSettings />
-        <WorkflowEditor />
-        <DangerZone />
+        <GeneralSettings readOnly={!canWrite} />
+        <WorkflowEditor readOnly={!canAdmin} />
+        {canAdmin && <DangerZone />}
       </div>
     </main>
   );
 }
 
-function GeneralSettings() {
+function GeneralSettings({ readOnly }: { readOnly: boolean }) {
   const { project } = useProject();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
@@ -45,22 +48,24 @@ function GeneralSettings() {
       title="General"
       description="Shown in the sidebar, project list and issue keys."
       footer={
-        <>
-          {saved && !dirty && <span className="mr-auto text-[12px] text-emerald-400">Saved</span>}
-          <Button
-            variant="primary"
-            disabled={!dirty || !name.trim()}
-            onClick={() => {
-              updateProject(project.id, { name: name.trim(), description: description.trim() });
-              setSaved(true);
-            }}
-          >
-            Save
-          </Button>
-        </>
+        !readOnly && (
+          <>
+            {saved && !dirty && <span className="mr-auto text-[12px] text-emerald-400">Saved</span>}
+            <Button
+              variant="primary"
+              disabled={!dirty || !name.trim()}
+              onClick={() => {
+                updateProject(project.id, { name: name.trim(), description: description.trim() });
+                setSaved(true);
+              }}
+            >
+              Save
+            </Button>
+          </>
+        )
       }
     >
-      <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
+      <fieldset disabled={readOnly} className="grid min-w-0 gap-4 sm:grid-cols-[1fr_120px]">
         <Field id="project-name" label="Name">
           <Input id="project-name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
         </Field>
@@ -70,12 +75,12 @@ function GeneralSettings() {
         <Field id="project-description" label="Description" className="sm:col-span-2">
           <Textarea id="project-description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
-      </div>
+      </fieldset>
     </Section>
   );
 }
 
-function WorkflowEditor() {
+function WorkflowEditor({ readOnly }: { readOnly: boolean }) {
   const { project } = useProject();
   const { issues } = useTracker();
   const [name, setName] = useState("");
@@ -86,53 +91,61 @@ function WorkflowEditor() {
   return (
     <Section
       title="Workflow"
-      description="The board's columns, left to right. Each status counts as To do, In progress or Done; Done statuses complete issues and drive burndown."
+      description={
+        readOnly
+          ? "The board's columns, left to right. Only admins can change the workflow."
+          : "The board's columns, left to right. Each status counts as To do, In progress or Done; Done statuses complete issues and drive burndown."
+      }
       bodyClassName="flex flex-col gap-4"
     >
-      <ol className="divide-y divide-line overflow-hidden rounded-lg border border-line">
-        {project.workflow.map((status, index) => (
-          <WorkflowRow
-            key={status.id}
-            status={status}
-            index={index}
-            total={project.workflow.length}
-            issueCount={counts.get(status.id) ?? 0}
-            fallback={project.workflow[index === 0 ? 1 : index - 1]}
-          />
-        ))}
-      </ol>
+      <fieldset disabled={readOnly} className="min-w-0">
+        <ol className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+          {project.workflow.map((status, index) => (
+            <WorkflowRow
+              key={status.id}
+              status={status}
+              index={index}
+              total={project.workflow.length}
+              issueCount={counts.get(status.id) ?? 0}
+              fallback={project.workflow[index === 0 ? 1 : index - 1]}
+            />
+          ))}
+        </ol>
+      </fieldset>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!name.trim()) return;
-          addStatus(project.id, name.trim(), category);
-          setName("");
-        }}
-        className="flex flex-col gap-2 sm:flex-row"
-      >
-        <label htmlFor="add-status-name" className="sr-only">
-          New status name
-        </label>
-        <Input id="add-status-name" placeholder="New status, e.g. QA" maxLength={24} value={name} onChange={(e) => setName(e.target.value)} />
-        <div className="flex gap-2">
-          <div className="w-36">
-            <label htmlFor="add-status-category" className="sr-only">
-              Category
-            </label>
-            <Select id="add-status-category" value={category} onChange={(e) => setCategory(e.target.value as StatusCategory)}>
-              {STATUS_CATEGORIES.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </Select>
+      {!readOnly && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!name.trim()) return;
+            addStatus(project.id, name.trim(), category);
+            setName("");
+          }}
+          className="flex flex-col gap-2 sm:flex-row"
+        >
+          <label htmlFor="add-status-name" className="sr-only">
+            New status name
+          </label>
+          <Input id="add-status-name" placeholder="New status, e.g. QA" maxLength={24} value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="flex gap-2">
+            <div className="w-36">
+              <label htmlFor="add-status-category" className="sr-only">
+                Category
+              </label>
+              <Select id="add-status-category" value={category} onChange={(e) => setCategory(e.target.value as StatusCategory)}>
+                {STATUS_CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button type="submit" variant="secondary" className="h-9" disabled={!name.trim()}>
+              <Plus aria-hidden className="size-3.5" /> Add
+            </Button>
           </div>
-          <Button type="submit" variant="secondary" className="h-9" disabled={!name.trim()}>
-            <Plus aria-hidden className="size-3.5" /> Add
-          </Button>
-        </div>
-      </form>
+        </form>
+      )}
     </Section>
   );
 }

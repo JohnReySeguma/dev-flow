@@ -9,6 +9,7 @@ import { useProject } from "@/components/project/project-context";
 import { Avatar, UnassignedAvatar } from "@/components/ui/avatar";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Dropdown, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/dropdown";
+import { usePermissions } from "@/lib/api/permissions";
 import { MEMBERS_BY_ID } from "@/lib/members";
 import { backlogIssues, isDone, projectSprints, sprintIssues, statusOf, sumPoints } from "@/lib/tracker/selectors";
 import { createSprint, deleteSprint, moveIssueToSprint, useTracker } from "@/lib/tracker/store";
@@ -27,6 +28,8 @@ export function BacklogView() {
   const state = useTracker();
   const [query, setQuery] = useState("");
   const [drag, setDrag] = useState<DragState | null>(null);
+  /** Viewers see the plan but can't change it: no ranking, moving, creating or starting. */
+  const { canWrite } = usePermissions();
 
   const sprints = projectSprints(state, project.id).filter((s) => s.status !== "completed");
   const hasActive = sprints.some((s) => s.status === "active");
@@ -46,6 +49,7 @@ export function BacklogView() {
 
   const dnd = {
     drag,
+    canEdit: canWrite,
     onRowDragStart: (event: DragEvent<HTMLElement>, issueId: string) => {
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", issueId);
@@ -84,9 +88,11 @@ export function BacklogView() {
                 className="h-8 w-44 rounded-lg border border-line bg-surface pr-2.5 pl-8 text-[13px] text-zinc-100 outline-none placeholder:text-zinc-500 hover:border-line-strong focus:border-brand/50 focus:ring-2 focus:ring-brand/20"
               />
             </div>
-            <Button variant="secondary" onClick={() => createSprint(project.id)}>
-              <Plus aria-hidden className="size-3.5" /> Sprint
-            </Button>
+            {canWrite && (
+              <Button variant="secondary" onClick={() => createSprint(project.id)}>
+                <Plus aria-hidden className="size-3.5" /> Sprint
+              </Button>
+            )}
           </div>
         </div>
 
@@ -101,9 +107,11 @@ export function BacklogView() {
           issues={filter(backlog)}
           emptyText="The backlog is empty. Everything is planned!"
           actions={
-            <Button size="sm" variant="ghost" onClick={() => openCreateIssue({ sprintId: null })}>
-              <Plus aria-hidden className="size-3.5" /> Create issue
-            </Button>
+            canWrite && (
+              <Button size="sm" variant="ghost" onClick={() => openCreateIssue({ sprintId: null })}>
+                <Plus aria-hidden className="size-3.5" /> Create issue
+              </Button>
+            )
           }
           dnd={dnd}
         />
@@ -114,6 +122,8 @@ export function BacklogView() {
 
 type Dnd = {
   drag: DragState | null;
+  /** Whether the user may rank, move or create (false for viewers). */
+  canEdit: boolean;
   onRowDragStart: (event: DragEvent<HTMLElement>, issueId: string) => void;
   onDragOver: (container: ContainerId, overIssueId: string | null) => void;
   onDrop: (container: ContainerId) => void;
@@ -159,53 +169,57 @@ function SprintSection({ sprint, issues, canStart, dnd }: { sprint: Sprint; issu
                 Open board <MoveRight aria-hidden className="size-3.5" />
               </Link>
             ) : (
-              <span title={canStart ? undefined : "Complete the active sprint first"}>
-                <Button size="sm" variant="primary" disabled={!canStart} onClick={() => setStarting(true)}>
-                  Start sprint
-                </Button>
-              </span>
+              dnd.canEdit && (
+                <span title={canStart ? undefined : "Complete the active sprint first"}>
+                  <Button size="sm" variant="primary" disabled={!canStart} onClick={() => setStarting(true)}>
+                    Start sprint
+                  </Button>
+                </span>
+              )
             )}
-            <Dropdown
-              align="end"
-              triggerLabel={`${sprint.name} options`}
-              triggerClassName="rounded-md border border-transparent p-1.5 text-zinc-500 outline-none hover:bg-raised hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-brand/50"
-              trigger={<Ellipsis className="size-4" />}
-            >
-              {(close) => (
-                <>
-                  <MenuItem
-                    icon={<Plus className="size-3.5" />}
-                    onSelect={() => {
-                      close();
-                      openCreateIssue({ sprintId: sprint.id });
-                    }}
-                  >
-                    Create issue in sprint
-                  </MenuItem>
-                  <MenuItem
-                    icon={<Pencil className="size-3.5" />}
-                    onSelect={() => {
-                      close();
-                      setEditing(true);
-                    }}
-                  >
-                    Edit name &amp; goal
-                  </MenuItem>
-                  {!active && (
+            {dnd.canEdit && (
+              <Dropdown
+                align="end"
+                triggerLabel={`${sprint.name} options`}
+                triggerClassName="rounded-md border border-transparent p-1.5 text-zinc-500 outline-none hover:bg-raised hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-brand/50"
+                trigger={<Ellipsis className="size-4" />}
+              >
+                {(close) => (
+                  <>
                     <MenuItem
-                      destructive
-                      icon={<Trash2 className="size-3.5 text-red-400" />}
+                      icon={<Plus className="size-3.5" />}
                       onSelect={() => {
                         close();
-                        deleteSprint(sprint.id);
+                        openCreateIssue({ sprintId: sprint.id });
                       }}
                     >
-                      Delete sprint
+                      Create issue in sprint
                     </MenuItem>
-                  )}
-                </>
-              )}
-            </Dropdown>
+                    <MenuItem
+                      icon={<Pencil className="size-3.5" />}
+                      onSelect={() => {
+                        close();
+                        setEditing(true);
+                      }}
+                    >
+                      Edit name &amp; goal
+                    </MenuItem>
+                    {!active && (
+                      <MenuItem
+                        destructive
+                        icon={<Trash2 className="size-3.5 text-red-400" />}
+                        onSelect={() => {
+                          close();
+                          deleteSprint(sprint.id);
+                        }}
+                      >
+                        Delete sprint
+                      </MenuItem>
+                    )}
+                  </>
+                )}
+              </Dropdown>
+            )}
           </>
         }
         dnd={dnd}
@@ -288,8 +302,8 @@ function BacklogRow({ issue, container, dnd }: { issue: Issue; container: Contai
   return (
     <li
       data-issue-row
-      draggable
-      onDragStart={(e) => dnd.onRowDragStart(e, issue.id)}
+      draggable={dnd.canEdit}
+      onDragStart={(e) => dnd.canEdit && dnd.onRowDragStart(e, issue.id)}
       onDragEnd={dnd.onDragEnd}
       onDragOver={(e) => {
         if (!dnd.drag) return;
@@ -323,53 +337,55 @@ function BacklogRow({ issue, container, dnd }: { issue: Issue; container: Contai
       </span>
       <EstimateChip points={issue.estimate} />
       {assignee ? <Avatar member={assignee} size="xs" /> : <UnassignedAvatar size="xs" />}
-      <Dropdown
-        align="end"
-        triggerLabel={`Move ${issue.id}`}
-        triggerClassName="rounded-md border border-transparent p-1 text-zinc-500 outline-none hover:bg-raised hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-brand/50"
-        trigger={<Ellipsis className="size-4" />}
-      >
-        {(close) => (
-          <>
-            <MenuLabel>Move to</MenuLabel>
-            {targets.map((s) => (
+      {dnd.canEdit && (
+        <Dropdown
+          align="end"
+          triggerLabel={`Move ${issue.id}`}
+          triggerClassName="rounded-md border border-transparent p-1 text-zinc-500 outline-none hover:bg-raised hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-brand/50"
+          trigger={<Ellipsis className="size-4" />}
+        >
+          {(close) => (
+            <>
+              <MenuLabel>Move to</MenuLabel>
+              {targets.map((s) => (
+                <MenuItem
+                  key={s.id}
+                  icon={<MoveRight className="size-3.5" />}
+                  onSelect={() => {
+                    close();
+                    moveIssueToSprint(issue.id, s.id);
+                  }}
+                >
+                  {s.name}
+                </MenuItem>
+              ))}
+              {issue.sprintId !== null && (
+                <MenuItem
+                  icon={<MoveRight className="size-3.5" />}
+                  onSelect={() => {
+                    close();
+                    moveIssueToSprint(issue.id, null);
+                  }}
+                >
+                  Backlog
+                </MenuItem>
+              )}
+              <MenuSeparator />
               <MenuItem
-                key={s.id}
-                icon={<MoveRight className="size-3.5" />}
+                icon={<ArrowUpToLine className="size-3.5" />}
                 onSelect={() => {
                   close();
-                  moveIssueToSprint(issue.id, s.id);
+                  const siblings = issue.sprintId ? sprintIssues(state, issue.sprintId) : backlogIssues(state, project.id);
+                  const first = siblings.find((i) => i.id !== issue.id);
+                  moveIssueToSprint(issue.id, issue.sprintId, first?.id);
                 }}
               >
-                {s.name}
+                Move to top
               </MenuItem>
-            ))}
-            {issue.sprintId !== null && (
-              <MenuItem
-                icon={<MoveRight className="size-3.5" />}
-                onSelect={() => {
-                  close();
-                  moveIssueToSprint(issue.id, null);
-                }}
-              >
-                Backlog
-              </MenuItem>
-            )}
-            <MenuSeparator />
-            <MenuItem
-              icon={<ArrowUpToLine className="size-3.5" />}
-              onSelect={() => {
-                close();
-                const siblings = issue.sprintId ? sprintIssues(state, issue.sprintId) : backlogIssues(state, project.id);
-                const first = siblings.find((i) => i.id !== issue.id);
-                moveIssueToSprint(issue.id, issue.sprintId, first?.id);
-              }}
-            >
-              Move to top
-            </MenuItem>
-          </>
-        )}
-      </Dropdown>
+            </>
+          )}
+        </Dropdown>
+      )}
     </li>
   );
 }

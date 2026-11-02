@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { describedBy, Field, Input, Textarea } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/section";
+import { usePermissions } from "@/lib/api/permissions";
 import { MEMBERS_BY_ID } from "@/lib/members";
 import { activeSprint, backlogIssues, progressOf, sprintIssues } from "@/lib/tracker/selectors";
 import { createProject, useTracker } from "@/lib/tracker/store";
@@ -21,6 +22,7 @@ const DAY = 86_400_000;
 export function ProjectsOverview() {
   const state = useTracker();
   const [creating, setCreating] = useState(false);
+  const { canWrite } = usePermissions();
 
   return (
     <>
@@ -28,9 +30,11 @@ export function ProjectsOverview() {
         title="Projects"
         description="Each project has its own backlog, sprints and board workflow."
         actions={
-          <Button variant="primary" onClick={() => setCreating(true)}>
-            <Plus aria-hidden className="size-3.5" /> New project
-          </Button>
+          canWrite && (
+            <Button variant="primary" onClick={() => setCreating(true)}>
+              <Plus aria-hidden className="size-3.5" /> New project
+            </Button>
+          )
         }
       />
       <div className="grid gap-4 md:grid-cols-2">
