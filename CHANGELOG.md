@@ -5,6 +5,24 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-02
+
+Step 2 of the API integration: authentication (API `v0.2.0`).
+
+### Added
+
+- Real sign-in, sign-up and logout in API mode, with server validation messages on their fields and `?next=` to return to the page that required sign-in.
+- Session check on load: signed-in routes wait for `GET /auth/me`, send signed-out visitors to `/login`, and offer a retry when the API can't answer.
+- Transparent token renewal: an expired access token triggers one shared `POST /auth/refresh` (single-flight across requests and tabs) and a retry.
+- GitHub and Google sign-in through the API's OAuth redirect, with a message for each `/login?error=oauth_*` failure.
+- Forgot password through the API, and a new `/reset-password` page for the emailed link.
+- Profile loaded and saved through `GET`/`PATCH /me`, sending only changed fields with `If-Match`; a conflicting change offers "Load latest". The sidebar shows the signed-in account.
+- Personal access tokens listed, created (secret shown once) and revoked through the API.
+
+### Changed
+
+- The sign-up subtitle no longer says any details work when connected to the API.
+
 ## [1.1.0] - 2026-11-02
 
 Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0.1` spec).
@@ -64,6 +82,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.2.0...v0.3.0
