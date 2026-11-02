@@ -68,6 +68,8 @@ curl http://localhost:4000/api/v1/health/ready   # {"status":"ok",...}
   ```
 
 - Commit `lib/api/schema.d.ts`. Bump the tag in the script whenever you integrate a new API release.
+- The frontend repo also keeps a readable snapshot of the spec at `docs/openapi.json`, refreshed from the same tag at
+  each integration step. The API repo's copy stays the source of truth.
 - Data shapes match `lib/tracker/types.ts` field for field. If a generated type and a hand-written one disagree,
   report it.
 
@@ -104,15 +106,15 @@ A thin `fetch` wrapper; every API call goes through it.
 
 ## 5. Integration roadmap
 
-| API release | Frontend release | Integrate                                                                                                                                                                                                         |
-| ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `v0.1.0` ✅ | `v1.1.0`         | §4.1–4.4: config, generated types, API client, error model. `GET /config` hides OAuth buttons that the server has disabled.                                                                                       |
-| `v0.2.0`    | `v1.2.0`         | Real sign-in, sign-up, logout; session check on load (`401` → `/login`); refresh once on `TOKEN_EXPIRED`; OAuth redirect; forgot password and a new `/reset-password` page; profile (`PATCH /me`); access tokens. |
-| `v0.3.0`    | `v1.3.0`         | Team members, roles and invites; a new `/invite` page; hide write actions from viewers.                                                                                                                           |
-| `v0.4.0`    | `v1.4.0`         | `/bootstrap`, project snapshot, projects, workflow statuses, issues, ranking, comments (§4.5).                                                                                                                    |
-| `v0.5.0`    | `v1.5.0`         | Sprint lifecycle and reports (burndown, velocity, history).                                                                                                                                                       |
-| `v0.6.0`    | `v1.6.0`         | Live Sync over Socket.IO: join the project room, apply events, ignore your own `actorId`, re-fetch the snapshot after reconnecting.                                                                               |
-| `v1.0.0`    | `v2.0.0`         | `RATE_LIMITED` handling, final contract review; API mode becomes the default.                                                                                                                                     |
+| API release | Frontend release | Integrate                                                                                                                                                                                                                                                                 |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v0.1.0` ✅ | `v1.1.0`         | §4.1–4.4: config, generated types, API client, error model. `GET /config` hides OAuth buttons that the server has disabled.                                                                                                                                               |
+| `v0.2.0` ✅ | `v1.2.0`         | Real sign-in, sign-up, logout; session check on load (`401` → `/login`); refresh once on `TOKEN_EXPIRED` (one refresh in flight at a time, see INTEGRATION §5.3); OAuth redirect; forgot password and a new `/reset-password` page; profile (`PATCH /me`); access tokens. |
+| `v0.3.0`    | `v1.3.0`         | Team members, roles and invites; a new `/invite` page; hide write actions from viewers.                                                                                                                                                                                   |
+| `v0.4.0`    | `v1.4.0`         | `/bootstrap`, project snapshot, projects, workflow statuses, issues, ranking, comments (§4.5).                                                                                                                                                                            |
+| `v0.5.0`    | `v1.5.0`         | Sprint lifecycle and reports (burndown, velocity, history).                                                                                                                                                                                                               |
+| `v0.6.0`    | `v1.6.0`         | Live Sync over Socket.IO: join the project room, apply events, ignore your own `actorId`, re-fetch the snapshot after reconnecting.                                                                                                                                       |
+| `v1.0.0`    | `v2.0.0`         | `RATE_LIMITED` handling, final contract review; API mode becomes the default.                                                                                                                                                                                             |
 
 Each API release's entry in `../DevFlow-be/CHANGELOG.md` has a **Frontend impact** section that is the authoritative list for that
 step. Exact paths, payloads and examples are in `../DevFlow-be/docs/INTEGRATION.md` and Swagger UI.
