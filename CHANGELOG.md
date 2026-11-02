@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-02
+
+Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0.1` spec).
+
+### Added
+
+- API mode: set `NEXT_PUBLIC_API_URL` to connect to the DevFlow API; leave it empty for the unchanged demo mode.
+- Committed `.env.example` documenting the variable (every other env file stays ignored).
+- TypeScript types generated from the API's OpenAPI 3.1 spec with `openapi-typescript` (`npm run api:types`, pinned to the `v1.0.1` tag).
+- `apiFetch()` API client: JSON, `credentials: "include"`, `ApiError` for problem+json responses (code, request id, field errors, `Retry-After`) and `NetworkError` when the server can't be reached.
+- A user-facing message for every code in the API's error catalogue, plus per-field validation messages.
+- Sign-in and sign-up show only the OAuth providers `GET /config` enables, with an accessible same-size placeholder while it loads; both are hidden when the API is unreachable, and email sign-in always stays available.
+- README section "Connecting to the API".
+
 ## [1.0.0] - 2026-11-01
 
 ### Added
@@ -50,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.1.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.1.0...v0.2.0
