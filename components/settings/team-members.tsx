@@ -1,9 +1,10 @@
 "use client";
 
-import { Ellipsis, MailPlus, RotateCcw, Send, UserMinus } from "lucide-react";
+import { Ellipsis, MailPlus, Send, UserMinus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Dropdown, MenuItem } from "@/components/ui/dropdown";
 import { describedBy, Input, Select } from "@/components/ui/field";
 import { Section } from "@/components/ui/section";
@@ -13,7 +14,7 @@ import { cn, timeAgo } from "@/lib/utils";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Notice = { tone: "success" | "info"; text: string; undo?: () => void };
+type Notice = { tone: "success" | "info"; text: string };
 
 type TeamMembersProps = {
   team: TeamMember[];
@@ -26,6 +27,8 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
   const [role, setRole] = useState<Role>("member");
   const [inviteError, setInviteError] = useState<string>();
   const [notice, setNotice] = useState<Notice | null>(null);
+  /** Removal is permanent, so it's confirmed first instead of offering an undo. */
+  const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
   const now = useNow();
 
   const adminCount = team.filter((m) => m.role === "admin" && m.status === "active").length;
@@ -58,15 +61,14 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
   }
 
   function remove(member: TeamMember) {
-    const index = team.findIndex((m) => m.id === member.id);
     onTeamChange((t) => t.filter((m) => m.id !== member.id));
+    setConfirmRemove(null);
     setNotice({
       tone: "info",
-      text: `${member.name} was removed from the workspace.`,
-      undo: () => {
-        onTeamChange((t) => [...t.slice(0, index), member, ...t.slice(index)]);
-        setNotice(null);
-      },
+      text:
+        member.status === "invited"
+          ? `The invite for ${member.email} was revoked.`
+          : `${member.name} was removed from the workspace.`,
     });
   }
 
@@ -128,15 +130,6 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
           )}
         >
           <span className="flex-1">{notice.text}</span>
-          {notice.undo && (
-            <button
-              type="button"
-              onClick={notice.undo}
-              className="flex items-center gap-1 rounded font-medium text-zinc-100 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50"
-            >
-              <RotateCcw aria-hidden className="size-3" /> Undo
-            </button>
-          )}
         </div>
       )}
 
@@ -248,7 +241,7 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
                                   setNotice({ tone: "info", text: "Promote another admin before removing the last one." });
                                   return;
                                 }
-                                remove(member);
+                                setConfirmRemove(member);
                               }}
                             >
                               {member.status === "invited" ? "Revoke invite" : "Remove from workspace"}
@@ -264,6 +257,54 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
           </tbody>
         </table>
       </div>
+
+      <RemoveMemberDialog member={confirmRemove} onCancel={() => setConfirmRemove(null)} onConfirm={remove} />
     </Section>
+  );
+}
+
+function RemoveMemberDialog({
+  member,
+  onCancel,
+  onConfirm,
+}: {
+  member: TeamMember | null;
+  onCancel: () => void;
+  onConfirm: (member: TeamMember) => void;
+}) {
+  const invite = member?.status === "invited";
+  return (
+    <Dialog
+      open={member !== null}
+      onClose={onCancel}
+      size="sm"
+      title={invite ? "Revoke this invite?" : `Remove ${member?.name ?? "member"}?`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="danger" autoFocus onClick={() => member && onConfirm(member)}>
+            {invite ? "Revoke invite" : "Remove member"}
+          </Button>
+        </>
+      }
+    >
+      {member && (
+        <p className="text-[13px] leading-relaxed text-zinc-400">
+          {invite ? (
+            <>
+              The link sent to <span className="text-zinc-200">{member.email}</span> stops working. You can invite them
+              again later.
+            </>
+          ) : (
+            <>
+              <span className="text-zinc-200">{member.name}</span> ({member.email}) loses access immediately. Their account,
+              sessions and access tokens are deleted. This can&apos;t be undone.
+            </>
+          )}
+        </p>
+      )}
+    </Dialog>
   );
 }
