@@ -70,6 +70,11 @@ export async function signOut(): Promise<void> {
   }
 }
 
+/** The API already ended every session (e.g. after a password reset); forget this tab's one too. */
+export function forgetSession() {
+  if (isApiMode()) publish({ status: "signed-out" });
+}
+
 /** Keeps the shell (sidebar, header) in step after the profile is saved. */
 export function setSessionUser(user: UserProfile) {
   if (state.status === "signed-in") publish({ ...state, user });
