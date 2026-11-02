@@ -7,6 +7,7 @@ import { useLayoutEffect, useState, type FormEvent } from "react";
 import { GitHubIcon, GoogleIcon } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
 import { describedBy, Field, Input } from "@/components/ui/field";
+import { usePublicConfig } from "@/lib/api/use-public-config";
 import { cn } from "@/lib/utils";
 
 export type AuthMode = "login" | "signup";
@@ -115,6 +116,16 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
   const busy = pending !== null;
 
+  // Demo mode: both providers, as before. API mode: only what GET /config enables; none if the API is down.
+  // The buttons still use the simulated flow until the API's real OAuth is integrated.
+  const publicConfig = usePublicConfig();
+  const providers = {
+    status: publicConfig.status,
+    github: publicConfig.status === "ready" && publicConfig.config.oauth.github,
+    google: publicConfig.status === "ready" && publicConfig.config.oauth.google,
+  };
+  const hasProviders = providers.github || providers.google;
+
   return (
     <div className="w-full max-w-[400px] animate-card-in">
       <div className="rounded-2xl border border-line-strong bg-surface/90 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset,0_30px_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:p-8">
@@ -146,38 +157,56 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           <p className="mt-1 text-[13px] text-zinc-500">{copy.subtitle}</p>
         </div>
 
-        <div className="mt-6 grid gap-2.5">
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full"
-            loading={pending === "github"}
-            disabled={busy}
-            onClick={() => authenticate("github")}
-          >
-            {pending !== "github" && <GitHubIcon className="size-4" />}
-            Continue with GitHub
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full"
-            loading={pending === "google"}
-            disabled={busy}
-            onClick={() => authenticate("google")}
-          >
-            {pending !== "google" && <GoogleIcon className="size-4" />}
-            Continue with Google
-          </Button>
-        </div>
+        {providers.status === "loading" ? (
+          // Same footprint as the two buttons, so the form doesn't move when /config answers.
+          <div role="status" aria-busy="true" className="mt-6 grid gap-2.5">
+            <span className="sr-only">Loading sign-in options…</span>
+            {[0, 1].map((i) => (
+              <div key={i} aria-hidden className="h-10 animate-pulse rounded-lg border border-line-strong bg-raised/60" />
+            ))}
+          </div>
+        ) : (
+          hasProviders && (
+            <div className="mt-6 grid gap-2.5">
+              {providers.github && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="w-full"
+                  loading={pending === "github"}
+                  disabled={busy}
+                  onClick={() => authenticate("github")}
+                >
+                  {pending !== "github" && <GitHubIcon className="size-4" />}
+                  Continue with GitHub
+                </Button>
+              )}
+              {providers.google && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="w-full"
+                  loading={pending === "google"}
+                  disabled={busy}
+                  onClick={() => authenticate("google")}
+                >
+                  {pending !== "google" && <GoogleIcon className="size-4" />}
+                  Continue with Google
+                </Button>
+              )}
+            </div>
+          )
+        )}
 
-        <div className="my-6 flex items-center gap-3 text-[11px] tracking-wide text-zinc-600 uppercase">
-          <span className="h-px flex-1 bg-line" />
-          or with email
-          <span className="h-px flex-1 bg-line" />
-        </div>
+        {(providers.status === "loading" || hasProviders) && (
+          <div className="my-6 flex items-center gap-3 text-[11px] tracking-wide text-zinc-600 uppercase">
+            <span className="h-px flex-1 bg-line" />
+            or with email
+            <span className="h-px flex-1 bg-line" />
+          </div>
+        )}
 
-        <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form noValidate onSubmit={onSubmit} className={cn("flex flex-col gap-4", providers.status !== "loading" && !hasProviders && "mt-6")}>
           {mode === "signup" && (
             <Field id="name" label="Full name" error={errors.name}>
               <Input
