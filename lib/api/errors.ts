@@ -34,6 +34,66 @@ export class NetworkError extends Error {
   }
 }
 
+type Message = string | ((error: ApiError) => string);
+
+function minutesUntil(seconds: number | null) {
+  const minutes = Math.max(1, Math.ceil((seconds ?? 60) / 60));
+  return minutes === 1 ? "a minute" : `${minutes} minutes`;
+}
+
+/**
+ * One user-facing message per error code — the whole catalogue in the API's INTEGRATION.md §4, including codes
+ * the frontend should never see. Typed as a Record so a new code in the spec fails the build until it has a message.
+ */
+const MESSAGES: Record<ErrorCode, Message> = {
+  BAD_REQUEST: "The request couldn't be read. Refresh the page and try again.",
+  RESET_TOKEN_INVALID: "This reset link is invalid or has expired. Request a new one.",
+  INVITE_INVALID: "This invite link is invalid, was replaced by a newer one, or has expired. Ask an admin to resend it.",
+  UNAUTHENTICATED: "Your session has ended. Sign in again.",
+  TOKEN_EXPIRED: "Your session expired. Sign in again.",
+  INVALID_CREDENTIALS: "Wrong email or password.",
+  WEBHOOK_SIGNATURE_INVALID: "The GitHub webhook signature was rejected.",
+  FORBIDDEN: "You don't have permission to do that.",
+  CANNOT_CHANGE_OWN_ROLE: "You can't change your own role.",
+  CANNOT_REMOVE_SELF: "You can't remove yourself from the workspace.",
+  NOT_FOUND: "That couldn't be found. It may have been deleted.",
+  EMAIL_TAKEN: "An account with this email already exists. Sign in instead.",
+  PROJECT_KEY_TAKEN: "That project key is already in use. Pick another one.",
+  SPRINT_ALREADY_ACTIVE: "Another sprint is already active. Complete it first.",
+  SPRINT_NOT_PLANNED: "Only planned sprints can be started or deleted.",
+  SPRINT_NOT_ACTIVE: "Only the active sprint can be completed.",
+  // The API explains which guard applied, so its detail is the most useful message here.
+  STATUS_DELETE_BLOCKED: (e) => e.detail || "This column can't be deleted.",
+  STATUS_UPDATE_BLOCKED: (e) => e.detail || "This change would leave the workflow without a to-do or a done column.",
+  LAST_ADMIN: "The workspace needs at least one admin.",
+  ALREADY_MEMBER: "This email is already a member or has a pending invite.",
+  CONFLICT_STALE: "Someone else changed this in the meantime. Reload to see the latest version.",
+  PAYLOAD_TOO_LARGE: "That's too much content to save at once.",
+  VALIDATION_FAILED: "Some fields need attention.",
+  RATE_LIMITED: (e) => `Too many attempts. Try again in ${minutesUntil(e.retryAfter)}.`,
+  INTERNAL_ERROR: (e) =>
+    e.requestId
+      ? `Something went wrong on our side. If it keeps happening, report reference ${e.requestId}.`
+      : "Something went wrong on our side. Please try again.",
+  EMAIL_DELIVERY_FAILED: "The email couldn't be sent. The invite was saved, so try Resend.",
+};
+
+/** The message to show for any error thrown by `apiFetch` (or anything else). */
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    const message = MESSAGES[error.code];
+    return typeof message === "function" ? message(error) : message;
+  }
+  if (error instanceof NetworkError) return "Can't reach the server. Check your connection and try again.";
+  return "Something went wrong. Please try again.";
+}
+
+/** `422 VALIDATION_FAILED` messages keyed by field name, ready to show next to each input. */
+export function fieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError) || error.code !== "VALIDATION_FAILED") return {};
+  return Object.fromEntries(error.errors.map(({ field, message }) => [field, message]));
+}
+
 function isProblem(value: unknown): value is ProblemDetails {
   return typeof value === "object" && value !== null && "code" in value && "status" in value;
 }
