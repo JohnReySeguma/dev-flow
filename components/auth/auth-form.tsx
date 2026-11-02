@@ -2,12 +2,12 @@
 
 import { ArrowRight, CircleAlert, Eye, EyeOff, MailCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useLayoutEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { GitHubIcon, GoogleIcon } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
 import { describedBy, Field, Input } from "@/components/ui/field";
-import { requestPasswordReset, safeRedirect } from "@/lib/api/auth";
+import { oauthUrl, requestPasswordReset, safeRedirect } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
 import { signIn, signUp } from "@/lib/api/session";
@@ -40,6 +40,30 @@ const COPY: Record<AuthMode, { title: string; subtitle: string; submit: string }
 /** Where to go after signing in: `?next=` when it is a path on this site, otherwise the projects overview. */
 function nextPath() {
   return safeRedirect(new URLSearchParams(window.location.search).get("next"));
+}
+
+/** Why the API sent the browser back to `/login?error=…` after OAuth (INTEGRATION §5.5). */
+const OAUTH_ERRORS: Record<string, string> = {
+  oauth_denied: "Sign-in was cancelled on the provider's page.",
+  oauth_state_mismatch: "That sign-in link expired or was tampered with. Please start again.",
+  oauth_email_unverified:
+    "Your provider account has no verified email address, so it can't be linked. Verify it there, or sign in with email.",
+  oauth_failed: "The provider couldn't be reached or refused the request. Please try again.",
+};
+
+/** Reads `?error=` (URL data, so it renders below its own Suspense boundary and the page still prerenders). */
+function OAuthErrorNotice() {
+  const code = useSearchParams().get("error");
+  if (!code) return null;
+  return (
+    <p
+      role="alert"
+      className="mt-6 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-[12px] text-red-300"
+    >
+      <CircleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+      {OAUTH_ERRORS[code] ?? "Sign-in with that provider didn't complete. Please try again."}
+    </p>
+  );
 }
 
 /** Server-side field errors for the inputs this form has. */
@@ -110,10 +134,26 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     if (submitted) setErrors(validate(mode, next));
   }
 
+  // Back from an abandoned OAuth trip, the browser may restore this page with the button still spinning.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setPending(null);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   // Demo mode: no backend, so simulate the auth round trip, then enter the app.
   function authenticate(via: Exclude<Pending, null>) {
     setPending(via);
     window.setTimeout(() => router.push("/projects"), 700);
+  }
+
+  /** OAuth is a full-page navigation to the API, which redirects to the provider and back (never a fetch). */
+  function continueWith(provider: Provider) {
+    if (!isApiMode()) return authenticate(provider);
+    setPending(provider);
+    window.location.assign(oauthUrl(provider, nextPath()));
   }
 
   async function submitToApi() {
@@ -167,8 +207,8 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
   const busy = pending !== null;
 
-  // Demo mode: both providers, as before. API mode: only what GET /config enables; none if the API is down.
-  // The buttons still use the simulated flow until the API's real OAuth is integrated.
+  // Demo mode: both providers, simulated as before. API mode: only what GET /config enables (none if the API is
+  // down), each a real OAuth redirect.
   const publicConfig = usePublicConfig();
   const providers = {
     status: publicConfig.status,
@@ -208,6 +248,12 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           <p className="mt-1 text-[13px] text-zinc-500">{copy.subtitle}</p>
         </div>
 
+        {mode === "login" && isApiMode() && (
+          <Suspense fallback={null}>
+            <OAuthErrorNotice />
+          </Suspense>
+        )}
+
         {providers.status === "loading" ? (
           // Same footprint as the two buttons, so the form doesn't move when /config answers.
           <div role="status" aria-busy="true" className="mt-6 grid gap-2.5">
@@ -226,7 +272,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
                   className="w-full"
                   loading={pending === "github"}
                   disabled={busy}
-                  onClick={() => authenticate("github")}
+                  onClick={() => continueWith("github")}
                 >
                   {pending !== "github" && <GitHubIcon className="size-4" />}
                   Continue with GitHub
@@ -239,7 +285,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
                   className="w-full"
                   loading={pending === "google"}
                   disabled={busy}
-                  onClick={() => authenticate("google")}
+                  onClick={() => continueWith("google")}
                 >
                   {pending !== "google" && <GoogleIcon className="size-4" />}
                   Continue with Google
