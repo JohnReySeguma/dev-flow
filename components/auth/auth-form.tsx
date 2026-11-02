@@ -1,12 +1,16 @@
 "use client";
 
-import { ArrowRight, Eye, EyeOff, MailCheck } from "lucide-react";
+import { ArrowRight, CircleAlert, Eye, EyeOff, MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useState, type FormEvent } from "react";
 import { GitHubIcon, GoogleIcon } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
 import { describedBy, Field, Input } from "@/components/ui/field";
+import { requestPasswordReset, safeRedirect } from "@/lib/api/auth";
+import { isApiMode } from "@/lib/api/config";
+import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
+import { signIn, signUp } from "@/lib/api/session";
 import { usePublicConfig } from "@/lib/api/use-public-config";
 import { cn } from "@/lib/utils";
 
@@ -28,10 +32,21 @@ const COPY: Record<AuthMode, { title: string; subtitle: string; submit: string }
   },
   signup: {
     title: "Create your workspace",
-    subtitle: "Any details work — this is a demo workspace.",
+    subtitle: isApiMode() ? "Sign up to join your team's DevFlow workspace." : "Any details work — this is a demo workspace.",
     submit: "Create Account",
   },
 };
+
+/** Where to go after signing in: `?next=` when it is a path on this site, otherwise the projects overview. */
+function nextPath() {
+  return safeRedirect(new URLSearchParams(window.location.search).get("next"));
+}
+
+/** Server-side field errors for the inputs this form has. */
+function formFieldErrors(error: unknown): Errors {
+  const fields = fieldErrors(error);
+  return { name: fields.name, email: fields.email, password: fields.password };
+}
 
 function validate(mode: AuthMode, values: Values): Errors {
   const errors: Errors = {};
@@ -69,6 +84,9 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
   const [resetSentTo, setResetSentTo] = useState<string | null>(null);
+  const [resetPending, setResetPending] = useState(false);
+  /** A message for the whole form (wrong password, rate limit, server unreachable…). */
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Routes stay mounted (hidden) after navigating away, so drop the pending
   // spinner and the password when this page is hidden; keep the email.
@@ -87,14 +105,31 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   function update<K extends keyof Values>(key: K, value: Values[K]) {
     const next = { ...values, [key]: value };
     setValues(next);
+    setFormError(null);
     // Re-validate live only after the first submit attempt, to avoid nagging.
     if (submitted) setErrors(validate(mode, next));
   }
 
-  // No backend yet: simulate the auth round trip, then enter the app.
+  // Demo mode: no backend, so simulate the auth round trip, then enter the app.
   function authenticate(via: Exclude<Pending, null>) {
     setPending(via);
     window.setTimeout(() => router.push("/projects"), 700);
+  }
+
+  async function submitToApi() {
+    setPending("email");
+    setFormError(null);
+    try {
+      if (mode === "login") await signIn({ email: values.email.trim(), password: values.password });
+      else await signUp({ name: values.name.trim(), email: values.email.trim(), password: values.password });
+      router.push(nextPath());
+    } catch (error) {
+      setPending(null);
+      const fields = formFieldErrors(error);
+      if (error instanceof ApiError && error.code === "EMAIL_TAKEN") fields.email = errorMessage(error);
+      if (fields.name || fields.email || fields.password) setErrors(fields);
+      else setFormError(errorMessage(error));
+    }
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -102,16 +137,32 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setSubmitted(true);
     const nextErrors = validate(mode, values);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) authenticate("email");
+    if (Object.keys(nextErrors).length > 0) return;
+    if (isApiMode()) void submitToApi();
+    else authenticate("email");
   }
 
-  function sendReset() {
+  async function sendReset() {
     if (!EMAIL_PATTERN.test(values.email)) {
       setErrors((e) => ({ ...e, email: "Enter your email first so we know where to send the link." }));
       return;
     }
     setErrors((e) => ({ ...e, email: undefined }));
-    setResetSentTo(values.email);
+    setFormError(null);
+    if (!isApiMode()) {
+      setResetSentTo(values.email);
+      return;
+    }
+    // The API answers 202 whether or not the account exists, so the notice never reveals it either.
+    setResetPending(true);
+    try {
+      await requestPasswordReset(values.email.trim());
+      setResetSentTo(values.email.trim());
+    } catch (error) {
+      setFormError(errorMessage(error));
+    } finally {
+      setResetPending(false);
+    }
   }
 
   const busy = pending !== null;
@@ -246,10 +297,12 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
               mode === "login" && (
                 <button
                   type="button"
-                  onClick={sendReset}
-                  className="rounded text-[12px] text-zinc-500 outline-none hover:text-zinc-200 focus-visible:ring-2 focus-visible:ring-brand/50"
+                  onClick={() => void sendReset()}
+                  disabled={resetPending || busy}
+                  aria-busy={resetPending || undefined}
+                  className="rounded text-[12px] text-zinc-500 outline-none hover:text-zinc-200 focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-60"
                 >
-                  Forgot password?
+                  {resetPending ? "Sending link…" : "Forgot password?"}
                 </button>
               )
             }
@@ -304,6 +357,16 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             >
               <MailCheck aria-hidden className="mt-px size-3.5 shrink-0" />
               If an account exists for {resetSentTo}, a reset link is on its way.
+            </p>
+          )}
+
+          {formError && (
+            <p
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-[12px] text-red-300"
+            >
+              <CircleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+              {formError}
             </p>
           )}
 
