@@ -116,8 +116,10 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Sign-in options:** only the OAuth providers `GET /config` enables (none if the API is unreachable; email sign-in always stays available). GitHub and Google redirect through the API and back.
 - **Password reset:** "Forgot password?" emails a link to the new `/reset-password` page.
 - **Profile:** your profile and personal access tokens.
+- **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation.
+- **Permissions:** controls follow your role. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-Projects, sprints, issues and the team still use the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+Projects, sprints and issues still use the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
@@ -132,6 +134,8 @@ All API access lives in [`lib/api/`](lib/api/):
 | `errors.ts` | `ApiError`, `NetworkError`, and a message for every API error code |
 | `auth.ts` | Typed calls for sign-in, sign-up, logout, password reset, OAuth URLs, profile and access tokens |
 | `session.ts` | `useSession()`: who is signed in, shared by the session gate, sidebar and profile |
+| `workspace.ts` | Typed calls for the workspace, members, roles and invites |
+| `permissions.ts` | `usePermissions()`: what the signed-in role may do |
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
 

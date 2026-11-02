@@ -4,7 +4,8 @@ import { useSyncExternalStore } from "react";
 import { getSession, login, logout, signup } from "./auth";
 import { onSignedOut } from "./client";
 import { isApiMode } from "./config";
-import type { AuthMe, LoginRequest, SignupRequest, UserProfile } from "./types";
+import type { AcceptInviteRequest, AuthMe, LoginRequest, SignupRequest, UserProfile } from "./types";
+import { acceptInvite } from "./workspace";
 
 export type SessionState =
   /** No API: the app runs on local demo data with the fixture user. */
@@ -58,6 +59,13 @@ export async function signIn(credentials: LoginRequest): Promise<AuthMe> {
 
 export async function signUp(details: SignupRequest): Promise<AuthMe> {
   const me = await signup(details);
+  publish(signedIn(me));
+  return me;
+}
+
+/** Accepting an invite creates the account and signs it in, like sign-up. */
+export async function joinWorkspace(token: string, details: AcceptInviteRequest): Promise<AuthMe> {
+  const me = await acceptInvite(token, details);
   publish(signedIn(me));
   return me;
 }

@@ -70,6 +70,8 @@ type KanbanColumnProps = {
   sort: LaneSort;
   collapsed: boolean;
   statusActions?: StatusActions;
+  /** Quick add and dragging; off for viewers. */
+  canEdit?: boolean;
   onOpenIssue: (id: string) => void;
   onOpenComposer: () => void;
   onCloseComposer: () => void;
@@ -94,6 +96,7 @@ export function KanbanColumn({
   sort,
   collapsed,
   statusActions,
+  canEdit = true,
   onOpenIssue,
   onOpenComposer,
   onCloseComposer,
@@ -183,15 +186,17 @@ export function KanbanColumn({
         </span>
 
         <div className="ml-auto flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={onOpenComposer}
-            aria-label={`Quick add issue to ${lane.label}`}
-            title="Quick add"
-            className="rounded-md p-1.5 text-zinc-500 outline-none transition-colors hover:bg-raised hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-brand/50"
-          >
-            <Plus className="size-3.5" />
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onOpenComposer}
+              aria-label={`Quick add issue to ${lane.label}`}
+              title="Quick add"
+              className="rounded-md p-1.5 text-zinc-500 outline-none transition-colors hover:bg-raised hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-brand/50"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          )}
           <Dropdown
             align="end"
             triggerLabel={`${lane.label} column options`}
@@ -200,15 +205,17 @@ export function KanbanColumn({
           >
             {(close) => (
               <>
-                <MenuItem
-                  icon={<Plus className="size-3.5" />}
-                  onSelect={() => {
-                    close();
-                    onOpenComposer();
-                  }}
-                >
-                  Add issue
-                </MenuItem>
+                {canEdit && (
+                  <MenuItem
+                    icon={<Plus className="size-3.5" />}
+                    onSelect={() => {
+                      close();
+                      onOpenComposer();
+                    }}
+                  >
+                    Add issue
+                  </MenuItem>
+                )}
                 {statusActions && (
                   <>
                     <MenuSeparator />
@@ -322,6 +329,7 @@ export function KanbanColumn({
             onOpen={onOpenIssue}
             onDragStart={onCardDragStart}
             onDragEnd={onCardDragEnd}
+            canDrag={canEdit}
           />
         ))}
 

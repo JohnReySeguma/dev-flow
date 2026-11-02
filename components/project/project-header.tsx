@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
+import { usePermissions } from "@/lib/api/permissions";
 import { MEMBERS } from "@/lib/members";
 import { useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ const TABS: { segment: string; label: string; icon: LucideIcon }[] = [
 
 export function ProjectHeader() {
   const { project, openIssue, openCreateIssue } = useProject();
+  const { canWrite } = usePermissions();
   const { issues } = useTracker();
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -107,15 +109,17 @@ export function ProjectHeader() {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => openCreateIssue()}
-            className="flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-medium text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_6px_16px_-6px_rgba(124,108,255,0.7)] outline-none transition-all hover:bg-brand-hover active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-          >
-            <Plus aria-hidden className="size-4" strokeWidth={2.5} />
-            <span className="hidden sm:inline">Create Issue</span>
-            <span className="sr-only sm:hidden">Create Issue</span>
-          </button>
+          {canWrite && (
+            <button
+              type="button"
+              onClick={() => openCreateIssue()}
+              className="flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-medium text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_6px_16px_-6px_rgba(124,108,255,0.7)] outline-none transition-all hover:bg-brand-hover active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            >
+              <Plus aria-hidden className="size-4" strokeWidth={2.5} />
+              <span className="hidden sm:inline">Create Issue</span>
+              <span className="sr-only sm:hidden">Create Issue</span>
+            </button>
+          )}
         </div>
       </div>
 

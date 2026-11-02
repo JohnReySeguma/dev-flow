@@ -33,3 +33,12 @@ export type AccessTokenPage = Schemas["AccessTokenPage"];
 export type CreatedAccessToken = Schemas["CreatedAccessToken"];
 export type CreateAccessTokenRequest = Schemas["CreateAccessTokenRequest"];
 export type OAuthProvider = "github" | "google";
+
+/* Workspace, members and invites (API v0.3.0). */
+
+export type Workspace = Schemas["Workspace"];
+export type TeamMember = Schemas["TeamMember"];
+export type TeamMemberPage = Schemas["TeamMemberPage"];
+export type InviteRequest = Schemas["InviteRequest"];
+export type InvitePreview = Schemas["InvitePreview"];
+export type AcceptInviteRequest = Schemas["AcceptInviteRequest"];

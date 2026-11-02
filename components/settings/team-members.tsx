@@ -1,73 +1,132 @@
 "use client";
 
-import { Ellipsis, MailPlus, RotateCcw, Send, UserMinus } from "lucide-react";
+import { Ellipsis, Lock, MailPlus, Send, UserMinus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Dropdown, MenuItem } from "@/components/ui/dropdown";
 import { describedBy, Input, Select } from "@/components/ui/field";
 import { Section } from "@/components/ui/section";
 import { ROLES, type Role, type TeamMember } from "@/lib/account-data";
+import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
 import { useNow } from "@/lib/use-now";
 import { cn, timeAgo } from "@/lib/utils";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Notice = { tone: "success" | "info"; text: string; undo?: () => void };
+type Notice = { tone: "success" | "info" | "error"; text: string };
+
+/** How member changes are carried out: locally in demo mode, through the API otherwise. All may reject. */
+export type TeamActions = {
+  invite: (email: string, role: Role) => Promise<TeamMember>;
+  changeRole: (member: TeamMember, role: Role) => Promise<TeamMember>;
+  remove: (member: TeamMember) => Promise<void>;
+  resend: (member: TeamMember) => Promise<TeamMember>;
+};
 
 type TeamMembersProps = {
   team: TeamMember[];
   onTeamChange: (update: (team: TeamMember[]) => TeamMember[]) => void;
   currentUserId: string;
+  /** Only admins manage members; everyone else sees the list read-only. */
+  canManage: boolean;
+  actions: TeamActions;
+  /** Re-fetch the list (e.g. after an invite was saved but its email failed). */
+  onReload?: () => void;
 };
 
-export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersProps) {
+const replace = (updated: TeamMember) => (team: TeamMember[]) => team.map((m) => (m.id === updated.id ? updated : m));
+
+export function TeamMembers({ team, onTeamChange, currentUserId, canManage, actions, onReload }: TeamMembersProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("member");
   const [inviteError, setInviteError] = useState<string>();
+  const [inviting, setInviting] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  /** Removal is permanent, so it's confirmed first instead of offering an undo. */
+  const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
+  const [removing, setRemoving] = useState(false);
   const now = useNow();
 
   const adminCount = team.filter((m) => m.role === "admin" && m.status === "active").length;
   const activeCount = team.filter((m) => m.status === "active").length;
   const pendingCount = team.length - activeCount;
 
-  function invite(event: FormEvent<HTMLFormElement>) {
+  async function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const address = email.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(address)) return setInviteError("Enter a valid email address.");
     if (team.some((m) => m.email === address)) return setInviteError(`${address} is already on this workspace.`);
 
-    const local = address.split("@")[0];
-    onTeamChange((t) => [
-      ...t,
-      {
-        id: `inv-${address}`,
-        name: local,
-        email: address,
-        initials: local.slice(0, 2).toUpperCase(),
-        gradient: "from-zinc-600 to-zinc-700",
-        role,
-        status: "invited",
-        lastActiveAt: null,
-      },
-    ]);
-    setEmail("");
-    setInviteError(undefined);
-    setNotice({ tone: "success", text: `Invite sent to ${address}.` });
+    setInviting(true);
+    setNotice(null);
+    try {
+      const member = await actions.invite(address, role);
+      onTeamChange((t) => [...t, member]);
+      setEmail("");
+      setInviteError(undefined);
+      setNotice({ tone: "success", text: `Invite sent to ${address}.` });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "EMAIL_DELIVERY_FAILED") {
+        // The invite exists; only its email failed. Show it in the list and point at Resend.
+        setEmail("");
+        onReload?.();
+        setNotice({ tone: "error", text: `${errorMessage(error)} (${address})` });
+      } else {
+        setInviteError(fieldErrors(error).email ?? errorMessage(error));
+      }
+    } finally {
+      setInviting(false);
+    }
   }
 
-  function remove(member: TeamMember) {
-    const index = team.findIndex((m) => m.id === member.id);
-    onTeamChange((t) => t.filter((m) => m.id !== member.id));
-    setNotice({
-      tone: "info",
-      text: `${member.name} was removed from the workspace.`,
-      undo: () => {
-        onTeamChange((t) => [...t.slice(0, index), member, ...t.slice(index)]);
-        setNotice(null);
-      },
-    });
+  async function changeRole(member: TeamMember, next: Role) {
+    setBusyId(member.id);
+    setNotice(null);
+    try {
+      const updated = await actions.changeRole(member, next);
+      onTeamChange(replace(updated));
+      setNotice({ tone: "success", text: `${member.name} is now ${ROLES.find((r) => r.id === next)?.label}.` });
+    } catch (error) {
+      setNotice({ tone: "error", text: errorMessage(error) });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function resend(member: TeamMember) {
+    setBusyId(member.id);
+    setNotice(null);
+    try {
+      onTeamChange(replace(await actions.resend(member)));
+      setNotice({ tone: "success", text: `Invite re-sent to ${member.email}. The previous link no longer works.` });
+    } catch (error) {
+      setNotice({ tone: "error", text: errorMessage(error) });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(member: TeamMember) {
+    setRemoving(true);
+    try {
+      await actions.remove(member);
+      onTeamChange((t) => t.filter((m) => m.id !== member.id));
+      setNotice({
+        tone: "info",
+        text:
+          member.status === "invited"
+            ? `The invite for ${member.email} was revoked.`
+            : `${member.name} was removed from the workspace.`,
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: errorMessage(error) });
+    } finally {
+      setRemoving(false);
+      setConfirmRemove(null);
+    }
   }
 
   return (
@@ -77,66 +136,67 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
       description={`${activeCount} active${pendingCount ? ` · ${pendingCount} pending invite${pendingCount > 1 ? "s" : ""}` : ""}`}
       bodyClassName="p-0"
     >
-      <form noValidate onSubmit={invite} className="flex flex-col gap-2 border-b border-line p-5 sm:flex-row sm:items-start">
-        <div className="flex-1">
-          <label htmlFor="invite-email" className="sr-only">
-            Email address to invite
-          </label>
-          <Input
-            id="invite-email"
-            type="email"
-            placeholder="teammate@company.com"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setInviteError(undefined);
-            }}
-            {...describedBy("invite-email", { error: inviteError })}
-          />
-          {inviteError && (
-            <p id="invite-email-error" role="alert" className="mt-1.5 text-[12px] text-red-400">
-              {inviteError}
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <div className="w-32">
-            <label htmlFor="invite-role" className="sr-only">
-              Role for new member
+      {canManage ? (
+        <form noValidate onSubmit={invite} className="flex flex-col gap-2 border-b border-line p-5 sm:flex-row sm:items-start">
+          <div className="flex-1">
+            <label htmlFor="invite-email" className="sr-only">
+              Email address to invite
             </label>
-            <Select id="invite-role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              {ROLES.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label}
-                </option>
-              ))}
-            </Select>
+            <Input
+              id="invite-email"
+              type="email"
+              placeholder="teammate@company.com"
+              value={email}
+              disabled={inviting}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setInviteError(undefined);
+              }}
+              {...describedBy("invite-email", { error: inviteError })}
+            />
+            {inviteError && (
+              <p id="invite-email-error" role="alert" className="mt-1.5 text-[12px] text-red-400">
+                {inviteError}
+              </p>
+            )}
           </div>
-          <Button type="submit" variant="primary" className="h-9">
-            <MailPlus aria-hidden className="size-3.5" />
-            Invite
-          </Button>
-        </div>
-      </form>
+          <div className="flex gap-2">
+            <div className="w-32">
+              <label htmlFor="invite-role" className="sr-only">
+                Role for new member
+              </label>
+              <Select id="invite-role" value={role} disabled={inviting} onChange={(e) => setRole(e.target.value as Role)}>
+                {ROLES.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button type="submit" variant="primary" className="h-9" loading={inviting}>
+              {!inviting && <MailPlus aria-hidden className="size-3.5" />}
+              Invite
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <p className="flex items-center gap-2 border-b border-line px-5 py-3 text-[12.5px] text-zinc-500">
+          <Lock aria-hidden className="size-3.5" />
+          Only admins can invite people, change roles or remove members.
+        </p>
+      )}
 
       {notice && (
         <div
-          role="status"
+          role={notice.tone === "error" ? "alert" : "status"}
           className={cn(
             "flex items-center gap-3 border-b border-line px-5 py-2.5 text-[12.5px]",
-            notice.tone === "success" ? "bg-emerald-500/[0.05] text-emerald-300" : "bg-raised/40 text-zinc-300",
+            notice.tone === "success" && "bg-emerald-500/[0.05] text-emerald-300",
+            notice.tone === "info" && "bg-raised/40 text-zinc-300",
+            notice.tone === "error" && "bg-red-500/[0.06] text-red-300",
           )}
         >
           <span className="flex-1">{notice.text}</span>
-          {notice.undo && (
-            <button
-              type="button"
-              onClick={notice.undo}
-              className="flex items-center gap-1 rounded font-medium text-zinc-100 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50"
-            >
-              <RotateCcw aria-hidden className="size-3" /> Undo
-            </button>
-          )}
         </div>
       )}
 
@@ -158,6 +218,8 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
               const isSelf = member.id === currentUserId;
               const isLastAdmin = member.role === "admin" && member.status === "active" && adminCount === 1;
               const roleLocked = isSelf || isLastAdmin;
+              const busy = busyId === member.id;
+              const roleLabel = ROLES.find((r) => r.id === member.role)?.label ?? member.role;
               return (
                 <tr key={member.id} className="transition-colors hover:bg-elevated/50">
                   <td className="px-5 py-3">
@@ -181,28 +243,32 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="w-28" title={roleLocked ? (isSelf ? "You can't change your own role" : "A workspace needs at least one admin") : undefined}>
-                      <label htmlFor={`role-${member.id}`} className="sr-only">
-                        Role for {member.name}
-                      </label>
-                      <Select
-                        id={`role-${member.id}`}
-                        value={member.role}
-                        disabled={roleLocked}
-                        onChange={(e) => {
-                          const next = e.target.value as Role;
-                          onTeamChange((t) => t.map((m) => (m.id === member.id ? { ...m, role: next } : m)));
-                          setNotice({ tone: "success", text: `${member.name} is now ${ROLES.find((r) => r.id === next)?.label}.` });
-                        }}
-                        className="h-8 text-[12.5px]"
+                    {canManage ? (
+                      <div
+                        className="w-28"
+                        title={roleLocked ? (isSelf ? "You can't change your own role" : "A workspace needs at least one admin") : undefined}
                       >
-                        {ROLES.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
+                        <label htmlFor={`role-${member.id}`} className="sr-only">
+                          Role for {member.name}
+                        </label>
+                        <Select
+                          id={`role-${member.id}`}
+                          value={member.role}
+                          disabled={roleLocked || busy}
+                          aria-busy={busy || undefined}
+                          onChange={(e) => void changeRole(member, e.target.value as Role)}
+                          className="h-8 text-[12.5px]"
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    ) : (
+                      <span className="text-[12.5px] text-zinc-300">{roleLabel}</span>
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     {member.status === "active" ? (
@@ -219,7 +285,7 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
                     {member.lastActiveAt ? timeAgo(member.lastActiveAt, now) : "—"}
                   </td>
                   <td className="px-3 py-3 text-right">
-                    {!isSelf && (
+                    {canManage && !isSelf && (
                       <Dropdown
                         align="end"
                         triggerLabel={`Actions for ${member.name}`}
@@ -233,7 +299,7 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
                                 icon={<Send className="size-3.5" />}
                                 onSelect={() => {
                                   close();
-                                  setNotice({ tone: "success", text: `Invite re-sent to ${member.email}.` });
+                                  void resend(member);
                                 }}
                               >
                                 Resend invite
@@ -248,7 +314,7 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
                                   setNotice({ tone: "info", text: "Promote another admin before removing the last one." });
                                   return;
                                 }
-                                remove(member);
+                                setConfirmRemove(member);
                               }}
                             >
                               {member.status === "invited" ? "Revoke invite" : "Remove from workspace"}
@@ -264,6 +330,61 @@ export function TeamMembers({ team, onTeamChange, currentUserId }: TeamMembersPr
           </tbody>
         </table>
       </div>
+
+      <RemoveMemberDialog
+        member={confirmRemove}
+        pending={removing}
+        onCancel={() => setConfirmRemove(null)}
+        onConfirm={(member) => void remove(member)}
+      />
     </Section>
+  );
+}
+
+function RemoveMemberDialog({
+  member,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  member: TeamMember | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: (member: TeamMember) => void;
+}) {
+  const invite = member?.status === "invited";
+  return (
+    <Dialog
+      open={member !== null}
+      onClose={onCancel}
+      size="sm"
+      title={invite ? "Revoke this invite?" : `Remove ${member?.name ?? "member"}?`}
+      footer={
+        <>
+          <Button variant="ghost" disabled={pending} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="danger" autoFocus loading={pending} onClick={() => member && onConfirm(member)}>
+            {invite ? "Revoke invite" : "Remove member"}
+          </Button>
+        </>
+      }
+    >
+      {member && (
+        <p className="text-[13px] leading-relaxed text-zinc-400">
+          {invite ? (
+            <>
+              The link sent to <span className="text-zinc-200">{member.email}</span> stops working. You can invite them
+              again later.
+            </>
+          ) : (
+            <>
+              <span className="text-zinc-200">{member.name}</span> ({member.email}) loses access immediately. Their account,
+              sessions and access tokens are deleted. This can&apos;t be undone.
+            </>
+          )}
+        </p>
+      )}
+    </Dialog>
   );
 }

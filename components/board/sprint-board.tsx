@@ -6,6 +6,7 @@ import { useMemo, useState, type DragEvent } from "react";
 import { useProject } from "@/components/project/project-context";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
+import { usePermissions } from "@/lib/api/permissions";
 import { CURRENT_USER_ID } from "@/lib/members";
 import {
   activeSprint,
@@ -64,6 +65,8 @@ export function SprintBoard() {
 
 function ActiveSprintBoard({ sprint, issues }: { sprint: Sprint; issues: Issue[] }) {
   const { project, openIssue } = useProject();
+  // Viewers can only look; editing the workflow (columns) is for admins.
+  const { canWrite, canAdmin } = usePermissions();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [display, setDisplay] = useState<DisplayOptions>({ tags: true, git: true, dates: true, compact: false });
@@ -138,8 +141,9 @@ function ActiveSprintBoard({ sprint, issues }: { sprint: Sprint; issues: Issue[]
               composerOpen={composerLane === lane.key}
               sort={laneSort[lane.key] ?? "manual"}
               collapsed={collapsed[lane.key] ?? false}
+              canEdit={canWrite}
               statusActions={
-                groupBy === "status"
+                groupBy === "status" && canAdmin
                   ? {
                       canMoveLeft: index > 0,
                       canMoveRight: index < lanes.length - 1,
@@ -173,7 +177,7 @@ function ActiveSprintBoard({ sprint, issues }: { sprint: Sprint; issues: Issue[]
             />
           );
         })}
-        {groupBy === "status" && <AddColumn projectId={project.id} />}
+        {groupBy === "status" && canAdmin && <AddColumn projectId={project.id} />}
       </div>
     </main>
   );
@@ -183,6 +187,7 @@ function SprintHeader({ sprint, issues }: { sprint: Sprint; issues: Issue[] }) {
   const { project } = useProject();
   const now = useNow();
   const [completing, setCompleting] = useState(false);
+  const { canWrite } = usePermissions();
   const progress = progressOf(project, issues);
   const pct = progress.totalPoints ? Math.round((progress.donePoints / progress.totalPoints) * 100) : 0;
   const end = sprint.endAt ? Date.parse(sprint.endAt) : now;
@@ -235,9 +240,11 @@ function SprintHeader({ sprint, issues }: { sprint: Sprint; issues: Issue[] }) {
             <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${pct}%` }} />
           </div>
         </div>
-        <Button variant="secondary" onClick={() => setCompleting(true)}>
-          Complete sprint
-        </Button>
+        {canWrite && (
+          <Button variant="secondary" onClick={() => setCompleting(true)}>
+            Complete sprint
+          </Button>
+        )}
       </div>
       <CompleteSprintDialog sprint={sprint} open={completing} onClose={() => setCompleting(false)} />
     </section>
