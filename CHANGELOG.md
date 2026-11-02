@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-02
+
+Step 3 of the API integration: the workspace (API `v0.3.0`).
+
+### Added
+
+- Workspace settings load the real members and pending invites; admins invite, resend, change roles and remove members through the API, with clear messages for refusals such as `LAST_ADMIN` and for invites whose email failed (`EMAIL_DELIVERY_FAILED`, offering Resend).
+- A new `/invite` page for emailed invites: preview the workspace, inviter, role and expiry, then accept with a name and password and continue signed in.
+- Role-based controls: viewers get a read-only app, and workflow editing, project deletion, team management and demo reset are limited to admins.
+
+### Changed
+
+- Removing a member or revoking an invite asks for confirmation instead of offering an undo, because removal deletes the account on the server immediately.
+
 ## [1.2.0] - 2026-11-02
 
 Step 2 of the API integration: authentication (API `v0.2.0`).
@@ -82,6 +96,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v0.3.0...v1.0.0
