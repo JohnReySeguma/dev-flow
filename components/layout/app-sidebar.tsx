@@ -7,6 +7,9 @@ import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/ui/logo";
 import { SESSION_USER } from "@/lib/account-data";
+import { isApiMode } from "@/lib/api/config";
+import { signOut, useSession } from "@/lib/api/session";
+import type { Member } from "@/lib/members";
 import { useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
 
@@ -102,10 +105,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     return () => setSigningOut(false);
   }, []);
 
+  const session = useSession();
+  // API mode shows the signed-in account (you are online by definition); demo mode the fixture user.
+  const user: Member & { email: string } =
+    session.status === "signed-in" ? { ...session.user, presence: "online" } : SESSION_USER;
+
   function logout() {
     setSigningOut(true);
-    // No real session: simulate the sign-out round trip, then leave the app.
-    window.setTimeout(() => router.push("/login"), 450);
+    // API mode: revoke the session; the session gate then sends the browser to /login.
+    if (isApiMode()) void signOut();
+    // Demo mode: no real session, so simulate the round trip, then leave the app.
+    else window.setTimeout(() => router.push("/login"), 450);
   }
 
   return (
@@ -132,10 +142,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </Suspense>
 
       <div className="flex items-center gap-2.5 border-t border-line px-4.5 py-3">
-        <Avatar member={SESSION_USER} size="md" showPresence />
+        <Avatar member={user} size="md" showPresence />
         <div className="min-w-0 flex-1 pl-0.5">
-          <p className="truncate text-[13px] font-medium text-zinc-100">{SESSION_USER.name}</p>
-          <p className="truncate text-[11px] text-zinc-500">{SESSION_USER.email}</p>
+          <p className="truncate text-[13px] font-medium text-zinc-100">{user.name}</p>
+          <p className="truncate text-[11px] text-zinc-500">{user.email}</p>
         </div>
         <button
           type="button"

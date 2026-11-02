@@ -18,3 +18,18 @@ export type ErrorCode = ProblemDetails["code"];
 
 /** One invalid field of a `422 VALIDATION_FAILED` response. */
 export type FieldError = NonNullable<ProblemDetails["errors"]>[number];
+
+/* Authentication, profile and access tokens (API v0.2.0). */
+
+/** `GET /auth/me`, and the body of sign-in, sign-up and invite acceptance. */
+export type AuthMe = Schemas["AuthMe"];
+export type UserProfile = Schemas["UserProfile"];
+export type Role = UserProfile["role"];
+export type SignupRequest = Schemas["SignupRequest"];
+export type LoginRequest = Schemas["LoginRequest"];
+export type UpdateProfileRequest = Schemas["UpdateProfileRequest"];
+export type AccessToken = Schemas["AccessToken"];
+export type AccessTokenPage = Schemas["AccessTokenPage"];
+export type CreatedAccessToken = Schemas["CreatedAccessToken"];
+export type CreateAccessTokenRequest = Schemas["CreateAccessTokenRequest"];
+export type OAuthProvider = "github" | "google";

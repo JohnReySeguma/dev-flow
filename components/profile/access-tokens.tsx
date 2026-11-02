@@ -1,14 +1,50 @@
 "use client";
 
-import { KeyRound, Plus, Terminal, TriangleAlert, X } from "lucide-react";
-import { useLayoutEffect, useState, type FormEvent } from "react";
+import { CircleAlert, KeyRound, Plus, Terminal, TriangleAlert, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { describedBy, Field, Input, Select } from "@/components/ui/field";
 import { Section } from "@/components/ui/section";
 import { ACCESS_TOKENS, TOKEN_SCOPES, type AccessToken, type TokenScope } from "@/lib/account-data";
+import { createAccessToken, listAccessTokens, revokeAccessToken } from "@/lib/api/auth";
+import { isApiMode } from "@/lib/api/config";
+import { errorMessage, fieldErrors } from "@/lib/api/errors";
 import { useNow } from "@/lib/use-now";
 import { cn, formatDate, timeAgo } from "@/lib/utils";
+
+type NewToken = { name: string; scopes: TokenScope[]; expiresInDays: number | null };
+
+/** Every page of `GET /me/tokens`, newest first. */
+async function loadAllTokens(): Promise<AccessToken[]> {
+  const tokens: AccessToken[] = [];
+  let cursor: string | null = null;
+  do {
+    const page = await listAccessTokens(cursor);
+    tokens.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+  return tokens;
+}
+
+/** Demo mode keeps minting a local secret; API mode returns the server's, shown exactly once. */
+async function mintToken(input: NewToken): Promise<{ token: AccessToken; secret: string }> {
+  if (isApiMode()) return createAccessToken(input);
+  const secret = generateSecret();
+  const now = Date.now();
+  return {
+    secret,
+    token: {
+      id: `pat_${secret.slice(4, 12).toLowerCase()}`,
+      name: input.name,
+      lastFour: secret.slice(-4),
+      scopes: input.scopes,
+      createdAt: new Date(now).toISOString(),
+      lastUsedAt: null,
+      expiresAt: input.expiresInDays ? new Date(now + input.expiresInDays * 86_400_000).toISOString() : null,
+    },
+  };
+}
 
 const EXPIRY_OPTIONS = [
   { days: 30, label: "30 days" },
@@ -26,10 +62,16 @@ function generateSecret() {
 }
 
 export function AccessTokens() {
-  const [tokens, setTokens] = useState<AccessToken[]>(ACCESS_TOKENS);
+  const [tokens, setTokens] = useState<AccessToken[]>(isApiMode() ? [] : ACCESS_TOKENS);
+  const [load, setLoad] = useState<{ status: "loading" | "ready" } | { status: "error"; error: unknown }>({
+    status: isApiMode() ? "loading" : "ready",
+  });
+  const [attempt, setAttempt] = useState(0);
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<{ name: string; secret: string } | null>(null);
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<{ id: string; message: string } | null>(null);
   const now = useNow();
 
   // Never leave a plaintext secret on screen once the page is navigated away from.
@@ -37,10 +79,40 @@ export function AccessTokens() {
     return () => setRevealed(null);
   }, []);
 
-  function create(token: AccessToken, secret: string) {
+  useEffect(() => {
+    if (!isApiMode()) return;
+    let active = true;
+    loadAllTokens()
+      .then((list) => {
+        if (!active) return;
+        setTokens(list);
+        setLoad({ status: "ready" });
+      })
+      .catch((error: unknown) => active && setLoad({ status: "error", error }));
+    return () => {
+      active = false;
+    };
+  }, [attempt]);
+
+  async function create(input: NewToken) {
+    const { token, secret } = await mintToken(input);
     setTokens((t) => [token, ...t]);
     setRevealed({ name: token.name, secret });
     setCreating(false);
+  }
+
+  async function revoke(id: string) {
+    setRevoking(id);
+    setRevokeError(null);
+    try {
+      if (isApiMode()) await revokeAccessToken(id);
+      setTokens((t) => t.filter((x) => x.id !== id));
+      setConfirmRevokeId(null);
+    } catch (error) {
+      setRevokeError({ id, message: errorMessage(error) });
+    } finally {
+      setRevoking(null);
+    }
   }
 
   return (
@@ -92,7 +164,30 @@ export function AccessTokens() {
 
       {creating && <CreateTokenForm onCancel={() => setCreating(false)} onCreate={create} />}
 
-      {tokens.length === 0 ? (
+      {load.status === "loading" ? (
+        <div role="status" aria-busy="true" className="flex flex-col gap-2">
+          <span className="sr-only">Loading access tokens…</span>
+          {[0, 1].map((i) => (
+            <div key={i} aria-hidden className="h-[74px] animate-pulse rounded-lg border border-line bg-canvas/40" />
+          ))}
+        </div>
+      ) : load.status === "error" ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/25 bg-red-500/[0.05] px-4 py-3">
+          <p role="alert" className="flex-1 text-[13px] text-red-300">
+            {errorMessage(load.error)}
+          </p>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setLoad({ status: "loading" });
+              setAttempt((a) => a + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : tokens.length === 0 ? (
         <p className="rounded-lg border border-dashed border-line-strong py-8 text-center text-[13px] text-zinc-500">
           No active tokens. Generate one to use the CLI.
         </p>
@@ -125,29 +220,34 @@ export function AccessTokens() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 self-end sm:self-center">
-                <CopyButton value={token.id} label={`Copy token ID ${token.id}`} />
-                {confirmRevokeId === token.id ? (
-                  <>
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmRevokeId(null)}>
-                      Cancel
+              <div className="flex flex-col items-end gap-1.5 self-end sm:self-center">
+                <div className="flex items-center gap-1.5">
+                  <CopyButton value={token.id} label={`Copy token ID ${token.id}`} />
+                  {confirmRevokeId === token.id ? (
+                    <>
+                      <Button size="sm" variant="ghost" disabled={revoking === token.id} onClick={() => setConfirmRevokeId(null)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        autoFocus
+                        loading={revoking === token.id}
+                        onClick={() => void revoke(token.id)}
+                      >
+                        Confirm revoke
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={() => setConfirmRevokeId(token.id)}>
+                      Revoke
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      autoFocus
-                      onClick={() => {
-                        setTokens((t) => t.filter((x) => x.id !== token.id));
-                        setConfirmRevokeId(null);
-                      }}
-                    >
-                      Confirm revoke
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" variant="secondary" onClick={() => setConfirmRevokeId(token.id)}>
-                    Revoke
-                  </Button>
+                  )}
+                </div>
+                {revokeError?.id === token.id && (
+                  <p role="alert" className="flex items-center gap-1 text-[11.5px] text-red-300">
+                    <CircleAlert aria-hidden className="size-3" /> {revokeError.message}
+                  </p>
                 )}
               </div>
             </li>
@@ -163,35 +263,35 @@ function CreateTokenForm({
   onCreate,
 }: {
   onCancel: () => void;
-  onCreate: (token: AccessToken, secret: string) => void;
+  /** Rejects with the API's error, shown in the form. */
+  onCreate: (input: NewToken) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<TokenScope[]>(["issues:read"]);
   const [expiryDays, setExpiryDays] = useState<number>(90);
   const [submitted, setSubmitted] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [server, setServer] = useState<{ fields: Record<string, string>; message: string | null }>({ fields: {}, message: null });
 
-  const nameError = submitted && !name.trim() ? "Give the token a name you'll recognise later." : undefined;
-  const scopeError = submitted && scopes.length === 0 ? "Select at least one scope." : undefined;
+  const nameError = submitted && !name.trim() ? "Give the token a name you'll recognise later." : server.fields.name;
+  const scopeError = submitted && scopes.length === 0 ? "Select at least one scope." : server.fields.scopes;
+  const expiryError = server.fields.expiresInDays;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitted(true);
+    setServer({ fields: {}, message: null });
     if (!name.trim() || scopes.length === 0) return;
 
-    const secret = generateSecret();
-    const now = Date.now();
-    onCreate(
-      {
-        id: `pat_${secret.slice(4, 12).toLowerCase()}`,
-        name: name.trim(),
-        lastFour: secret.slice(-4),
-        scopes,
-        createdAt: new Date(now).toISOString(),
-        lastUsedAt: null,
-        expiresAt: expiryDays ? new Date(now + expiryDays * 86_400_000).toISOString() : null,
-      },
-      secret,
-    );
+    setPending(true);
+    try {
+      await onCreate({ name: name.trim(), scopes, expiresInDays: expiryDays || null });
+    } catch (error) {
+      // Scope errors arrive per item (`scopes.0`); show them once, on the group.
+      const fields = Object.fromEntries(Object.entries(fieldErrors(error)).map(([field, message]) => [field.split(".")[0], message]));
+      setServer({ fields, message: Object.keys(fields).length ? null : errorMessage(error) });
+      setPending(false);
+    }
   }
 
   return (
@@ -211,8 +311,13 @@ function CreateTokenForm({
             {...describedBy("token-name", { error: nameError })}
           />
         </Field>
-        <Field id="token-expiry" label="Expiration">
-          <Select id="token-expiry" value={expiryDays} onChange={(e) => setExpiryDays(Number(e.target.value))}>
+        <Field id="token-expiry" label="Expiration" error={expiryError}>
+          <Select
+            id="token-expiry"
+            value={expiryDays}
+            onChange={(e) => setExpiryDays(Number(e.target.value))}
+            {...describedBy("token-expiry", { error: expiryError })}
+          >
             {EXPIRY_OPTIONS.map((o) => (
               <option key={o.days} value={o.days}>
                 {o.label}
@@ -256,11 +361,18 @@ function CreateTokenForm({
         )}
       </fieldset>
 
+      {server.message && (
+        <p role="alert" className="flex items-start gap-2 text-[12.5px] text-red-300">
+          <CircleAlert aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          {server.message}
+        </p>
+      )}
+
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="ghost" disabled={pending} onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="primary" loading={pending}>
           Generate token
         </Button>
       </div>

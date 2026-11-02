@@ -110,7 +110,16 @@ DevFlow runs in one of two modes, chosen by a single variable:
 
 Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next build` starts, so **restart the dev server after changing the variable**. Never put secrets in a `NEXT_PUBLIC_*` variable: they are visible in the browser.
 
-**What API mode connects today:** the sign-in and sign-up pages read `GET /config` and show only the OAuth providers the server enables (none if the API is unreachable; email sign-in always stays available). Everything else still uses the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+**What API mode connects today:**
+
+- **Accounts:** real sign-in, sign-up and logout; the app checks the session on load and sends signed-out visitors to `/login` (returning them afterwards). Expired access tokens are renewed transparently, one refresh at a time.
+- **Sign-in options:** only the OAuth providers `GET /config` enables (none if the API is unreachable; email sign-in always stays available). GitHub and Google redirect through the API and back.
+- **Password reset:** "Forgot password?" emails a link to the new `/reset-password` page.
+- **Profile:** your profile and personal access tokens.
+
+Projects, sprints, issues and the team still use the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+
+With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
 ### API code
 
@@ -119,8 +128,10 @@ All API access lives in [`lib/api/`](lib/api/):
 | File | Purpose |
 | --- | --- |
 | `config.ts` | The only reader of `NEXT_PUBLIC_API_URL`; `isApiMode()` |
-| `client.ts` | `apiFetch()`: JSON, `credentials: "include"`, typed errors |
+| `client.ts` | `apiFetch()` / `apiRequest()`: JSON, `credentials: "include"`, typed errors, single-flight token refresh |
 | `errors.ts` | `ApiError`, `NetworkError`, and a message for every API error code |
+| `auth.ts` | Typed calls for sign-in, sign-up, logout, password reset, OAuth URLs, profile and access tokens |
+| `session.ts` | `useSession()`: who is signed in, shared by the session gate, sidebar and profile |
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
 
