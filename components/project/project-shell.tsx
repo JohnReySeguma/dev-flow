@@ -10,6 +10,7 @@ import { CreateIssueDialog } from "./create-issue-dialog";
 import { IssueSheet } from "./issue-sheet";
 import { ProjectContext, type CreateIssueOptions } from "./project-context";
 import { ProjectHeader } from "./project-header";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 type ProjectShellProps = {
   params: Promise<{ key: string }>;
@@ -59,6 +60,7 @@ export function ProjectShell({ params, children }: ProjectShellProps) {
 }
 
 function ProjectNotFound({ projectKey }: { projectKey: string }) {
+  const { href } = useWorkspaceRoute();
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
       <span className="flex size-11 items-center justify-center rounded-xl border border-line-strong bg-elevated text-zinc-400">
@@ -68,7 +70,7 @@ function ProjectNotFound({ projectKey }: { projectKey: string }) {
       <p className="max-w-sm text-[13px] text-zinc-500">
         It may have been deleted, or the link is mistyped. Projects live in this browser&apos;s demo workspace.
       </p>
-      <Link href="/projects" className={buttonStyles({ variant: "secondary", className: "mt-2" })}>
+      <Link href={href("/projects")} className={buttonStyles({ variant: "secondary", className: "mt-2" })}>
         Back to projects
       </Link>
     </main>

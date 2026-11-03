@@ -7,7 +7,7 @@ export function generateStaticParams() {
   return createSeed(0).projects.map((p) => ({ key: p.key }));
 }
 
-export default function ProjectLayout({ children, params }: LayoutProps<"/projects/[key]">) {
+export default function ProjectLayout({ children, params }: LayoutProps<"/w/[slug]/projects/[key]">) {
   return (
     <Suspense fallback={<ProjectShellFallback />}>
       <ProjectShell params={params}>{children}</ProjectShell>

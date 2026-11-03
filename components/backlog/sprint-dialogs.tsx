@@ -10,6 +10,7 @@ import { describedBy, Field, Input, Select, Textarea } from "@/components/ui/fie
 import { sprintIssues, sumPoints } from "@/lib/tracker/selectors";
 import { startSprint, updateSprint, useTracker } from "@/lib/tracker/store";
 import type { Sprint } from "@/lib/tracker/types";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 const DURATIONS = [7, 14, 21, 28];
 
@@ -33,6 +34,7 @@ export function EditSprintDialog({ sprint, open, onClose }: SprintDialogProps) {
 }
 
 function SprintForm({ sprint, mode, onDone }: { sprint: Sprint; mode: "start" | "edit"; onDone: () => void }) {
+  const { href } = useWorkspaceRoute();
   const { project } = useProject();
   const state = useTracker();
   const router = useRouter();
@@ -56,7 +58,7 @@ function SprintForm({ sprint, mode, onDone }: { sprint: Sprint; mode: "start" | 
     }
     startSprint(sprint.id, { name: name.trim(), goal: goal.trim(), durationDays: duration });
     onDone();
-    router.push(`/projects/${project.key}/board`);
+    router.push(href(`/projects/${project.key}/board`));
   }
 
   return (

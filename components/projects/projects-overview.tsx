@@ -16,6 +16,7 @@ import { createProject, useTracker } from "@/lib/tracker/store";
 import type { Project, TrackerState } from "@/lib/tracker/types";
 import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 const DAY = 86_400_000;
 
@@ -48,6 +49,7 @@ export function ProjectsOverview() {
 }
 
 function ProjectCard({ project, state }: { project: Project; state: TrackerState }) {
+  const { href } = useWorkspaceRoute();
   const now = useNow();
   const sprint = activeSprint(state, project.id);
   const progress = sprint ? progressOf(project, sprintIssues(state, sprint.id)) : null;
@@ -58,7 +60,7 @@ function ProjectCard({ project, state }: { project: Project; state: TrackerState
 
   return (
     <Link
-      href={`/projects/${project.key}/${sprint ? "board" : "backlog"}`}
+      href={href(`/projects/${project.key}/${sprint ? "board" : "backlog"}`)}
       className="group flex min-w-0 flex-col rounded-xl border border-line bg-surface p-5 outline-none transition-colors hover:border-line-strong hover:bg-elevated focus-visible:ring-2 focus-visible:ring-brand/50"
     >
       <div className="flex items-start gap-3">
@@ -121,6 +123,7 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
 }
 
 function NewProjectForm({ onClose }: { onClose: () => void }) {
+  const { href } = useWorkspaceRoute();
   const { projects } = useTracker();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -146,7 +149,7 @@ function NewProjectForm({ onClose }: { onClose: () => void }) {
     if (!valid) return;
     createProject({ name: name.trim(), key: effectiveKey, description: description.trim() });
     onClose();
-    router.push(`/projects/${effectiveKey}/backlog`);
+    router.push(href(`/projects/${effectiveKey}/backlog`));
   }
 
   return (

@@ -33,6 +33,7 @@ import { BoardToolbar } from "./board-toolbar";
 import { CompleteSprintDialog } from "./complete-sprint-dialog";
 import { KanbanColumn, type LaneSort } from "./kanban-column";
 import type { DisplayOptions, Filters, GroupBy, Lane } from "./types";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 const EMPTY_FILTERS: Filters = { query: "", assignees: [], priorities: [], mine: false };
@@ -315,6 +316,7 @@ function AddColumn({ projectId }: { projectId: string }) {
 }
 
 function NoActiveSprint() {
+  const { href } = useWorkspaceRoute();
   const { project } = useProject();
   const state = useTracker();
   const next = projectSprints(state, project.id).find((s) => s.status === "planned");
@@ -330,7 +332,7 @@ function NoActiveSprint() {
         The board shows the sprint in progress. Plan one from the backlog: drag issues into a sprint, then start it.
         {next && ` ${next.name} is ready with ${nextCount} issue${nextCount === 1 ? "" : "s"}.`}
       </p>
-      <Link href={`/projects/${project.key}/backlog`} className={buttonStyles({ variant: "primary", className: "mt-2" })}>
+      <Link href={href(`/projects/${project.key}/backlog`)} className={buttonStyles({ variant: "primary", className: "mt-2" })}>
         Plan in backlog
       </Link>
     </main>

@@ -16,6 +16,7 @@ import { createSprint, deleteSprint, moveIssueToSprint, useTracker } from "@/lib
 import type { Issue, Sprint } from "@/lib/tracker/types";
 import { cn, formatDate } from "@/lib/utils";
 import { EditSprintDialog, StartSprintDialog } from "./sprint-dialogs";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 /** Drop containers: a sprint id, or "backlog". */
 type ContainerId = string;
@@ -131,6 +132,7 @@ type Dnd = {
 };
 
 function SprintSection({ sprint, issues, canStart, dnd }: { sprint: Sprint; issues: Issue[]; canStart: boolean; dnd: Dnd }) {
+  const { href } = useWorkspaceRoute();
   const { project, openCreateIssue } = useProject();
   const [starting, setStarting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -165,7 +167,7 @@ function SprintSection({ sprint, issues, canStart, dnd }: { sprint: Sprint; issu
         actions={
           <>
             {active ? (
-              <Link href={`/projects/${project.key}/board`} className={buttonStyles({ variant: "secondary", size: "sm" })}>
+              <Link href={href(`/projects/${project.key}/board`)} className={buttonStyles({ variant: "secondary", size: "sm" })}>
                 Open board <MoveRight aria-hidden className="size-3.5" />
               </Link>
             ) : (

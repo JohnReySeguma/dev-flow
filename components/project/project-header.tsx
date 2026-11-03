@@ -10,6 +10,7 @@ import { MEMBERS } from "@/lib/members";
 import { useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
 import { useProject } from "./project-context";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 const TABS: { segment: string; label: string; icon: LucideIcon }[] = [
   { segment: "board", label: "Board", icon: LayoutGrid },
@@ -19,6 +20,7 @@ const TABS: { segment: string; label: string; icon: LucideIcon }[] = [
 ];
 
 export function ProjectHeader() {
+  const { href } = useWorkspaceRoute();
   const { project, openIssue, openCreateIssue } = useProject();
   const { canWrite } = usePermissions();
   const { issues } = useTracker();
@@ -26,7 +28,7 @@ export function ProjectHeader() {
   const [query, setQuery] = useState("");
   const [notFound, setNotFound] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const base = `/projects/${project.key}`;
+  const base = href(`/projects/${project.key}`);
 
   // ⌘K / Ctrl+K focuses "jump to issue" from anywhere in the project.
   useEffect(() => {
