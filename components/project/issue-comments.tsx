@@ -10,7 +10,7 @@ import { errorMessage, fieldErrors } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/api/permissions";
 import { addComment, listComments } from "@/lib/api/tracker";
 import type { Comment } from "@/lib/api/types";
-import { countComment } from "@/lib/tracker/store";
+import { countComment, useIssueSaved } from "@/lib/tracker/store";
 import { useNow } from "@/lib/use-now";
 import { timeAgo } from "@/lib/utils";
 
@@ -28,8 +28,11 @@ export function IssueComments({ issueKey }: { issueKey: string }) {
   const [body, setBody] = useState("");
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string>();
+  // A just-created issue reaches the server a moment later; ask for its comments once it has.
+  const saved = useIssueSaved(issueKey);
 
   useEffect(() => {
+    if (!saved) return;
     let active = true;
     listComments(slug, issueKey)
       .then((comments) => active && setLoaded({ status: "ready", comments }))
@@ -37,7 +40,7 @@ export function IssueComments({ issueKey }: { issueKey: string }) {
     return () => {
       active = false;
     };
-  }, [slug, issueKey, attempt]);
+  }, [slug, issueKey, attempt, saved]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -371,6 +371,7 @@ export function createIssue(projectId: string, input: NewIssue): string {
     return mapProject(withIssue, projectId, (p) => ({ ...p, nextIssueNumber: p.nextIssueNumber + 1 }));
   });
   const key = keyOfProject(projectId);
+  if (API) setUnsaved(id, true);
   void remote(key, async (slug) => {
     const created = await api.createIssue(slug, key, {
       title: input.title,
@@ -387,7 +388,7 @@ export function createIssue(projectId: string, input: NewIssue): string {
       ids.set(id, created.id);
       resyncs.add(key);
     }
-  });
+  }).finally(() => setUnsaved(id, false));
   return id;
 }
 
@@ -444,6 +445,22 @@ export function deleteIssue(id: string) {
   const key = keyOfIssue(id);
   commit((s) => ({ ...s, issues: s.issues.filter((i) => i.id !== id) }));
   void remote(key, (slug) => api.deleteIssue(slug, real(id)));
+}
+
+/** Issues created locally whose POST hasn't been answered yet (API mode). */
+let unsaved: ReadonlySet<string> = new Set();
+
+function setUnsaved(id: string, waiting: boolean) {
+  const next = new Set(unsaved);
+  if (waiting) next.add(id);
+  else next.delete(id);
+  unsaved = next;
+  emit();
+}
+
+/** API mode: false until the server has the issue, so nothing asks for it (comments) before it exists. */
+export function useIssueSaved(id: string): boolean {
+  return useSyncExternalStore(subscribe, () => !unsaved.has(id), () => true);
 }
 
 /** A comment was added through the API: count it on the card. */
