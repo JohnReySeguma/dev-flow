@@ -16,7 +16,14 @@ const NAME_MAX = 48;
  * Name + "Start with sample projects" → `POST /workspaces`, then opens the new workspace. You become its admin.
  * Used by the switcher's dialog and by /welcome.
  */
-export function CreateWorkspaceForm({ onCancel, submitLabel = "Create workspace" }: { onCancel?: () => void; submitLabel?: string }) {
+type CreateWorkspaceFormProps = {
+  onCancel?: () => void;
+  /** Called once the new workspace opens, e.g. to close the dialog (it lives in the sidebar, which stays mounted). */
+  onCreated?: () => void;
+  submitLabel?: string;
+};
+
+export function CreateWorkspaceForm({ onCancel, onCreated, submitLabel = "Create workspace" }: CreateWorkspaceFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [sampleData, setSampleData] = useState(true);
@@ -37,6 +44,8 @@ export function CreateWorkspaceForm({ onCancel, submitLabel = "Create workspace"
       // The switcher and the workspace route read /auth/me, so refresh it before opening the new workspace.
       await reloadSession();
       router.push(workspacePath(workspace.slug));
+      setPending(false);
+      onCreated?.();
     } catch (error) {
       setPending(false);
       const fields = fieldErrors(error);
@@ -102,7 +111,7 @@ export function CreateWorkspaceForm({ onCancel, submitLabel = "Create workspace"
 export function CreateWorkspaceDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onClose={onClose} title="Create workspace" description="A private space for a team: its own projects, members and roles. You'll be its admin.">
-      {open && <CreateWorkspaceForm onCancel={onClose} />}
+      {open && <CreateWorkspaceForm onCancel={onClose} onCreated={onClose} />}
     </Dialog>
   );
 }
