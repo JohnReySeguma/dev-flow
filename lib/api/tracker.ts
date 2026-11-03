@@ -77,6 +77,10 @@ export const deleteStatus = (slug: string, key: string, id: string, moveTo: stri
 export const createIssue = (slug: string, key: string, body: CreateIssueRequest) =>
   apiFetch<ApiIssue>(project(slug, key, "/issues"), { method: "POST", body });
 
+/** Any issue, open or done in a completed sprint. A bare number (`104`) needs `project`; any case and padding works. */
+export const getIssue = (slug: string, keyOrNumber: string, project?: string) =>
+  apiFetch<ApiIssue>(issue(slug, keyOrNumber), { query: { project } });
+
 export const updateIssue = (slug: string, key: string, body: UpdateIssueRequest) =>
   apiFetch<ApiIssue>(issue(slug, key), { method: "PATCH", body });
 

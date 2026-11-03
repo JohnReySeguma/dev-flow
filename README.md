@@ -49,7 +49,7 @@ Project ── owns a Workflow (ordered statuses, each in a category)
 | Charts | Hand-rolled SVG with a CVD-validated palette |
 | Contact form | [FormSubmit](https://formsubmit.co) (no backend required) |
 
-Out of the box there is no backend: demo data lives in the browser and can be reset from **Workspace settings → Reset demo data**. Point it at the [DevFlow API](#connecting-to-the-api) to keep everything on a server instead. Sample dates are generated relative to today, so the demo sprint is always mid-flight.
+DevFlow runs against the [DevFlow API](https://github.com/JohnReySeguma/dev-flow-be) (accounts, workspaces, the tracker, Live Sync and GitHub; see [Connecting to the API](#connecting-to-the-api)). Without one it is a browser-only demo: sample data lives in `localStorage` and can be reset from **Workspace settings → Reset demo data**. Sample dates are generated relative to today, so the demo sprint is always mid-flight.
 
 ## Project structure
 
@@ -76,8 +76,11 @@ lib/
 
 ## Getting started
 
+Start the API first (next section), then:
+
 ```bash
 npm install
+cp .env.example .env.local   # points at the local API; leave the value empty for demo mode
 npm run dev       # http://localhost:3000
 npm run build     # production build (type-checks and prerenders)
 npm run lint
@@ -93,8 +96,8 @@ DevFlow runs in one of two modes, chosen by a single variable:
 
 | `NEXT_PUBLIC_API_URL` | Mode | Behaviour |
 | --- | --- | --- |
-| empty (default) | **Demo** | Everything runs in the browser on sample data in `localStorage`; no request reaches a server. |
-| `http://localhost:4000/api/v2` | **API** | The app talks to the [DevFlow API](https://github.com/JohnReySeguma/dev-flow-be). |
+| `http://localhost:4000/api/v2` (`.env.example`) | **API** | The app talks to the [DevFlow API](https://github.com/JohnReySeguma/dev-flow-be). |
+| empty or unset | **Demo** | Everything runs in the browser on sample data in `localStorage`; no request reaches a server. A hosted copy without an API stays usable this way. |
 
 1. Start the API (from the API repo, with Docker Desktop running):
 
@@ -107,13 +110,13 @@ DevFlow runs in one of two modes, chosen by a single variable:
 2. Point the frontend at it and start it **on port 3000**. The API only accepts browser requests from `http://localhost:3000`.
 
    ```bash
-   cp .env.example .env.local   # then set NEXT_PUBLIC_API_URL=http://localhost:4000/api/v2
+   cp .env.example .env.local   # already set to http://localhost:4000/api/v2
    npm run dev
    ```
 
 Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next build` starts, so **restart the dev server after changing the variable**. Never put secrets in a `NEXT_PUBLIC_*` variable: they are visible in the browser.
 
-**What API mode connects today:**
+**What API mode covers:**
 
 - **Accounts:** real sign-in, sign-up and logout; the app checks the session on load and sends signed-out visitors to `/login` (returning them afterwards). Expired access tokens are renewed transparently, one refresh at a time.
 - **Sign-in options:** only the OAuth providers `GET /config` enables (none if the API is unreachable; email sign-in always stays available). GitHub and Google redirect through the API and back.
@@ -134,9 +137,16 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
 - **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-API mode becomes the default in the final step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
+
+### Known limitations
+
+- **Last write wins** on issues and projects: the API offers `If-Match` conflict checks there, but only the profile uses them (a refused change still rolls back and says why).
+- **A project loads all its open issues at once** (`/snapshot`, as the store expects). Fine at portfolio scale; very large projects would want the paged `GET .../projects/:key/issues`.
+- **Your own other tabs:** Live Sync skips events made by your account (the contract says so, since this tab already applied them), so a second tab signed in as you catches up on reload rather than live.
+- **Issues done in completed sprints** aren't on boards or backlogs (snapshots leave them out); ⌘K jump still opens them by key or number.
 
 ### API code
 
@@ -156,7 +166,7 @@ All API access lives in [`lib/api/`](lib/api/):
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
 
-The types are generated from the API's spec at tag **`v2.0.0-beta.5`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. Regenerate when a later API release changes its spec: update the tag in the `api:types` script, then run
+The types are generated from the API's spec at tag **`v2.0.0`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. Regenerate when a later API release changes its spec: update the tag in the `api:types` script, then run
 
 ```bash
 npm run api:types
@@ -177,6 +187,16 @@ This repository follows a lightweight, release-oriented Git workflow:
 | `v0.2.0` | Issue tracking core — projects, sprints, board, backlog, reports |
 | `v0.3.0` | Workspace shell, accounts and authentication |
 | `v1.0.0` | Public site, legal pages, branding and contact |
+| `v1.1.0` | API client, generated types and errors |
+| `v1.2.0` | Real authentication |
+| `v1.3.0` | Team members, roles and invites |
+| `v1.4.0` | Workspaces (API v2) |
+| `v1.5.0` | Projects, boards, backlogs and sprints on the API |
+| `v1.6.0` | Reports on the API |
+| `v1.7.0` | Existing accounts join from an invite |
+| `v1.8.0` | Email verification |
+| `v1.9.0` | Live Sync and GitHub |
+| `v2.0.0` | Final contract review: API v2.0.0, API mode by default |
 
 ## License
 
