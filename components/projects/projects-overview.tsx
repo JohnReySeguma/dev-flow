@@ -10,7 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { describedBy, Field, Input, Textarea } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/section";
 import { usePermissions } from "@/lib/api/permissions";
-import { MEMBERS_BY_ID } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import { activeSprint, backlogIssues, progressOf, sprintIssues } from "@/lib/tracker/selectors";
 import { createProject, useTracker } from "@/lib/tracker/store";
 import type { Project, TrackerState } from "@/lib/tracker/types";
@@ -55,7 +55,8 @@ function ProjectCard({ project, state }: { project: Project; state: TrackerState
   const progress = sprint ? progressOf(project, sprintIssues(state, sprint.id)) : null;
   const pct = progress?.totalPoints ? Math.round((progress.donePoints / progress.totalPoints) * 100) : 0;
   const daysLeft = sprint?.endAt ? Math.ceil((Date.parse(sprint.endAt) - now) / DAY) : null;
-  const lead = MEMBERS_BY_ID[project.leadId];
+  const { byId } = useTeam();
+  const lead = byId[project.leadId];
   const backlog = backlogIssues(state, project.id).length;
 
   return (

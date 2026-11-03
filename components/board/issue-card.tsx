@@ -3,7 +3,7 @@
 import { CalendarClock, Clock, MessageSquare } from "lucide-react";
 import type { DragEvent } from "react";
 import { Avatar, UnassignedAvatar } from "@/components/ui/avatar";
-import { MEMBERS_BY_ID } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import type { Issue } from "@/lib/tracker/types";
 import { useNow } from "@/lib/use-now";
 import { cn, dueLabel, timeAgo, type DueState } from "@/lib/utils";
@@ -30,7 +30,8 @@ type IssueCardProps = {
 
 export function IssueCard({ issue, isDone, display, isDragging, onOpen, onDragStart, onDragEnd, canDrag = true }: IssueCardProps) {
   const now = useNow();
-  const assignee = issue.assigneeId ? MEMBERS_BY_ID[issue.assigneeId] : null;
+  const { byId } = useTeam();
+  const assignee = issue.assigneeId ? (byId[issue.assigneeId] ?? null) : null;
   const due = issue.dueAt && !isDone ? dueLabel(issue.dueAt, now) : null;
   const showMeta = (display.git && issue.git) || (display.tags && issue.tags.length > 0);
 

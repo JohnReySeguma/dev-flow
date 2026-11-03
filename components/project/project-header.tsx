@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { usePermissions } from "@/lib/api/permissions";
-import { MEMBERS } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import { useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
 import { useProject } from "./project-context";
@@ -23,6 +23,7 @@ export function ProjectHeader() {
   const { href } = useWorkspaceRoute();
   const { project, openIssue, openCreateIssue } = useProject();
   const { canWrite } = usePermissions();
+  const team = useTeam();
   const { issues } = useTracker();
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -106,8 +107,8 @@ export function ProjectHeader() {
           </form>
 
           <div role="group" aria-label="Team" className="hidden gap-1.5 xl:flex">
-            {MEMBERS.slice(0, 4).map((m) => (
-              <Avatar key={m.id} member={m} size="sm" showPresence />
+            {team.members.slice(0, 4).map((m) => (
+              <Avatar key={m.id} member={m} size="sm" showPresence={team.showsPresence} />
             ))}
           </div>
 

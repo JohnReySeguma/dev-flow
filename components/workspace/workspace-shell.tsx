@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { isApiMode } from "@/lib/api/config";
 import { useSession } from "@/lib/api/session";
 import { DEMO_WORKSPACE_SLUG, rememberWorkspace, workspacePath } from "@/lib/workspace-route";
+import { TrackerGate } from "./tracker-gate";
 import { makeWorkspaceRoute, WorkspaceContext } from "./workspace-context";
 import { leaveForAnotherWorkspace } from "./workspace-navigation";
 
@@ -15,7 +16,8 @@ type WorkspaceShellProps = {
 
 /**
  * Resolves the workspace from the URL, remembers it, and provides it to everything below. In API mode the slug
- * must be one of the account's workspaces (from /auth/me); otherwise the user is moved to another one.
+ * must be one of the account's workspaces (from /auth/me); otherwise the user is moved to another one. Its tracker
+ * data loads before the pages render (TrackerGate).
  */
 export function WorkspaceShell({ params, children }: WorkspaceShellProps) {
   const { slug } = use(params);
@@ -46,7 +48,13 @@ export function WorkspaceShell({ params, children }: WorkspaceShellProps) {
   }, [known, slug, router, session.status]);
 
   if (!known) return <WorkspaceShellFallback />;
-  return <WorkspaceContext value={route}>{children}</WorkspaceContext>;
+  return (
+    <WorkspaceContext value={route}>
+      <TrackerGate key={slug} slug={slug} fallback={<WorkspaceShellFallback />}>
+        {children}
+      </TrackerGate>
+    </WorkspaceContext>
+  );
 }
 
 export function WorkspaceShellFallback() {

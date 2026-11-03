@@ -10,7 +10,7 @@ import { Avatar, UnassignedAvatar } from "@/components/ui/avatar";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Dropdown, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/dropdown";
 import { usePermissions } from "@/lib/api/permissions";
-import { MEMBERS_BY_ID } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import { backlogIssues, isDone, projectSprints, sprintIssues, statusOf, sumPoints } from "@/lib/tracker/selectors";
 import { createSprint, deleteSprint, moveIssueToSprint, useTracker } from "@/lib/tracker/store";
 import type { Issue, Sprint } from "@/lib/tracker/types";
@@ -296,7 +296,8 @@ function BacklogRow({ issue, container, dnd }: { issue: Issue; container: Contai
   const { project, openIssue } = useProject();
   const state = useTracker();
   const status = statusOf(project, issue.statusId);
-  const assignee = issue.assigneeId ? MEMBERS_BY_ID[issue.assigneeId] : null;
+  const { byId } = useTeam();
+  const assignee = issue.assigneeId ? (byId[issue.assigneeId] ?? null) : null;
   const targets = projectSprints(state, project.id).filter((s) => s.status !== "completed" && s.id !== issue.sprintId);
   const dropBefore = dnd.drag?.overIssueId === issue.id && dnd.drag.issueId !== issue.id;
   const done = isDone(project, issue);

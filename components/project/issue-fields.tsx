@@ -2,7 +2,7 @@
 
 import type { SelectHTMLAttributes } from "react";
 import { Select } from "@/components/ui/field";
-import { MEMBERS } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import { projectSprints } from "@/lib/tracker/selectors";
 import { ESTIMATES, ISSUE_TYPES, PRIORITIES, type Project, type TrackerState } from "@/lib/tracker/types";
 
@@ -68,10 +68,11 @@ export function PrioritySelect(props: SelectProps) {
 }
 
 export function AssigneeSelect(props: SelectProps) {
+  const { members } = useTeam();
   return (
     <Select {...props}>
       <option value={UNASSIGNED_VALUE}>Unassigned</option>
-      {MEMBERS.map((m) => (
+      {members.map((m) => (
         <option key={m.id} value={m.id}>
           {m.name}
         </option>

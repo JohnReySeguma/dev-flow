@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { describedBy, Field, Input, Textarea } from "@/components/ui/field";
-import { CURRENT_USER_ID } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import { defaultStatusId } from "@/lib/tracker/selectors";
 import { createIssue, useTracker } from "@/lib/tracker/store";
 import type { IssueType, Priority } from "@/lib/tracker/types";
@@ -43,7 +43,8 @@ function CreateIssueForm({ options, onClose, onCreated }: { options: CreateIssue
   const [description, setDescription] = useState("");
   const [type, setType] = useState<IssueType>("task");
   const [priority, setPriority] = useState<Priority>("medium");
-  const [assignee, setAssignee] = useState(CURRENT_USER_ID);
+  const { currentUserId } = useTeam();
+  const [assignee, setAssignee] = useState(currentUserId || UNASSIGNED_VALUE);
   const [estimate, setEstimate] = useState("");
   const [sprint, setSprint] = useState(options.sprintId ?? BACKLOG_VALUE);
   const [status, setStatus] = useState(options.statusId ?? defaultStatusId(project));
