@@ -196,6 +196,7 @@ This repository follows a lightweight, release-oriented Git workflow:
 | `v1.7.0` | Existing accounts join from an invite |
 | `v1.8.0` | Email verification |
 | `v1.9.0` | Live Sync and GitHub |
+| `v2.0.0` | Final contract review: API v2.0.0, API mode by default |
 
 ## License
 
