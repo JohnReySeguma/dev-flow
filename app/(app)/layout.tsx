@@ -3,6 +3,12 @@ import { SessionGate } from "@/components/auth/session-gate";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { VerifyEmailBanner } from "@/components/layout/verify-email-banner";
 
+/**
+ * In API mode the session is only known in the browser (its cookies belong to the API), so entering the signed-in
+ * area waits on SessionGate and can't be instant; navigations between pages inside it are still validated.
+ */
+export const instant = false;
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SessionGate>
