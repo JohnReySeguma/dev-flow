@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { isApiMode } from "@/lib/api/config";
 import { usePermissions } from "@/lib/api/permissions";
 import { deleteIssue, updateIssue, useTracker } from "@/lib/tracker/store";
 import type { Issue, IssueType, Priority } from "@/lib/tracker/types";
@@ -22,6 +23,7 @@ import {
   TypeSelect,
   UNASSIGNED_VALUE,
 } from "./issue-fields";
+import { IssueComments } from "./issue-comments";
 import { useProject } from "./project-context";
 
 export function IssueSheet({ issueId, onClose }: { issueId: string | null; onClose: () => void }) {
@@ -158,6 +160,8 @@ function IssueDetails({ issue, onDeleted }: { issue: Issue; onDeleted: () => voi
           <MessageSquare aria-hidden className="size-3" /> {issue.comments}
         </dd>
       </dl>
+
+      {isApiMode() && <IssueComments key={issue.id} issueKey={issue.id} />}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
         <span className="flex items-center gap-1 text-[12px] text-zinc-500">

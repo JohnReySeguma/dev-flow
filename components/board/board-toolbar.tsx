@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Dropdown, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/dropdown";
-import { MEMBERS } from "@/lib/members";
+import { useTeam } from "@/lib/tracker/team";
 import { PRIORITIES, type Priority } from "@/lib/tracker/types";
 import { cn } from "@/lib/utils";
 import { PRIORITY_STYLES } from "./badges";
@@ -53,7 +53,8 @@ export function BoardToolbar({
     filters.priorities.length > 0 ||
     filters.mine;
 
-  const selectedAssignees = MEMBERS.filter((m) => filters.assignees.includes(m.id));
+  const { members } = useTeam();
+  const selectedAssignees = members.filter((m) => filters.assignees.includes(m.id));
 
   return (
     <div className="flex flex-col gap-3 border-b border-line px-4 py-3 lg:flex-row lg:items-center sm:px-6">
@@ -103,7 +104,7 @@ export function BoardToolbar({
           {() => (
             <>
               <MenuLabel>Assignee</MenuLabel>
-              {MEMBERS.map((m) => (
+              {members.map((m) => (
                 <MenuItem
                   key={m.id}
                   icon={<Avatar member={m} size="xs" className="size-4 text-[7px]" />}

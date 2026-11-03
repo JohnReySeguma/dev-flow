@@ -148,30 +148,47 @@ function ApiSettings() {
   );
 }
 
+/** Demo mode: a fresh local seed. API mode: the workspace's sample projects are restored on the server, for everyone. */
 function DemoData() {
+  const api = isApiMode();
   const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reset() {
+    setPending(true);
+    setError(null);
+    try {
+      await resetDemoData();
+      setConfirming(false);
+      setDone(true);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <Section
-      title="Demo data"
-      description="Projects, sprints and issues are stored in this browser (localStorage) — nothing is sent to a server. Resetting restores the sample workspace with dates relative to today."
+      title={api ? "Sample data" : "Demo data"}
+      description={
+        api
+          ? "Restores the sample projects (DEV, BIL and MOB) to their original sprints and issues, with dates relative to today, for everyone in this workspace. Projects you created stay as they are."
+          : "Projects, sprints and issues are stored in this browser (localStorage) — nothing is sent to a server. Resetting restores the sample workspace with dates relative to today."
+      }
     >
       <div className="flex flex-wrap items-center gap-3">
         {confirming ? (
           <>
-            <span className="text-[13px] text-zinc-300">Discard every change you&apos;ve made?</span>
-            <Button variant="ghost" onClick={() => setConfirming(false)}>
+            <span className="text-[13px] text-zinc-300">
+              {api ? "Undo every change to the sample projects?" : "Discard every change you’ve made?"}
+            </span>
+            <Button variant="ghost" disabled={pending} onClick={() => setConfirming(false)}>
               Cancel
             </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                resetDemoData();
-                setConfirming(false);
-                setDone(true);
-              }}
-            >
+            <Button variant="danger" loading={pending} onClick={() => void reset()}>
               Reset demo data
             </Button>
           </>
@@ -182,7 +199,12 @@ function DemoData() {
         )}
         {done && !confirming && (
           <span role="status" className="text-[12.5px] text-emerald-400">
-            Sample workspace restored.
+            {api ? "Sample projects restored." : "Sample workspace restored."}
+          </span>
+        )}
+        {error && (
+          <span role="alert" className="text-[12.5px] text-red-300">
+            {error}
           </span>
         )}
       </div>

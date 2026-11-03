@@ -7,7 +7,6 @@ import { useProject } from "@/components/project/project-context";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { usePermissions } from "@/lib/api/permissions";
-import { CURRENT_USER_ID } from "@/lib/members";
 import {
   activeSprint,
   cannotDeleteStatusReason,
@@ -27,6 +26,7 @@ import {
   useTracker,
 } from "@/lib/tracker/store";
 import { PRIORITIES, STATUS_CATEGORIES, type Issue, type Priority, type Sprint, type StatusCategory } from "@/lib/tracker/types";
+import { useTeam } from "@/lib/tracker/team";
 import { useNow } from "@/lib/use-now";
 import { cn, formatDate } from "@/lib/utils";
 import { BoardToolbar } from "./board-toolbar";
@@ -39,8 +39,8 @@ const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2,
 const EMPTY_FILTERS: Filters = { query: "", assignees: [], priorities: [], mine: false };
 const DAY = 86_400_000;
 
-function matchesFilters(issue: Issue, filters: Filters) {
-  if (filters.mine && issue.assigneeId !== CURRENT_USER_ID) return false;
+function matchesFilters(issue: Issue, filters: Filters, me: string) {
+  if (filters.mine && issue.assigneeId !== me) return false;
   if (filters.assignees.length > 0 && !filters.assignees.includes(issue.assigneeId ?? "")) return false;
   if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) return false;
   const q = filters.query.trim().toLowerCase();
@@ -68,6 +68,7 @@ function ActiveSprintBoard({ sprint, issues }: { sprint: Sprint; issues: Issue[]
   const { project, openIssue } = useProject();
   // Viewers can only look; editing the workflow (columns) is for admins.
   const { canWrite, canAdmin } = usePermissions();
+  const { currentUserId } = useTeam();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [display, setDisplay] = useState<DisplayOptions>({ tags: true, git: true, dates: true, compact: false });
@@ -82,7 +83,7 @@ function ActiveSprintBoard({ sprint, issues }: { sprint: Sprint; issues: Issue[]
       ? project.workflow.map((s) => ({ key: s.id, label: s.name, category: s.category }))
       : PRIORITIES.map((p) => ({ key: p.id, label: p.label }));
 
-  const visible = useMemo(() => issues.filter((i) => matchesFilters(i, filters)), [issues, filters]);
+  const visible = useMemo(() => issues.filter((i) => matchesFilters(i, filters, currentUserId)), [issues, filters, currentUserId]);
   const laneOf = (issue: Issue) => (groupBy === "status" ? issue.statusId : issue.priority);
 
   function drop(laneKey: string) {
@@ -99,7 +100,7 @@ function ActiveSprintBoard({ sprint, issues }: { sprint: Sprint; issues: Issue[]
       title,
       type: "task",
       priority: groupBy === "priority" ? (laneKey as Priority) : "medium",
-      assigneeId: CURRENT_USER_ID,
+      assigneeId: currentUserId || null,
       estimate: null,
       sprintId: sprint.id,
       statusId: groupBy === "status" ? laneKey : undefined,

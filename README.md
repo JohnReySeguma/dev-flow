@@ -49,7 +49,7 @@ Project ── owns a Workflow (ordered statuses, each in a category)
 | Charts | Hand-rolled SVG with a CVD-validated palette |
 | Contact form | [FormSubmit](https://formsubmit.co) (no backend required) |
 
-There is no backend: demo data lives in the browser and can be reset from **Workspace settings → Reset demo data**. Sample dates are generated relative to today, so the demo sprint is always mid-flight.
+Out of the box there is no backend: demo data lives in the browser and can be reset from **Workspace settings → Reset demo data**. Point it at the [DevFlow API](#connecting-to-the-api) to keep everything on a server instead. Sample dates are generated relative to today, so the demo sprint is always mid-flight.
 
 ## Project structure
 
@@ -69,7 +69,7 @@ components/
   board/ backlog/ reports/ project/ projects/   feature modules
   layout/ marketing/ auth/ profile/ settings/ workspace/
 lib/
-  tracker/          domain types, seed data, selectors, store
+  tracker/          domain types, seed data, selectors, store (local or API), team
   utils.ts          class merging, date helpers
   site.ts           contact + social link configuration
 ```
@@ -122,10 +122,14 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Workspace settings:** admins rename (the URL stays) and delete a workspace; anyone can leave it. Losing access, here or from another tab, moves you to another workspace.
 - **Profile:** your profile and personal access tokens; each token works in one workspace, picked when you generate it.
 - **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation. Sign-up opens your new workspace; accepting an invite opens the inviting one.
+- **Projects, boards and backlogs:** each workspace's projects, workflow columns, sprints and issues load from the API when you open it (switching workspaces loads the other one). Creating, editing, dragging, ranking and deleting issues, editing columns and projects, and planning, starting and completing sprints all save to the server. Changes show at once; if the server refuses one, the project reloads and a notice says why.
+- **Comments:** the issue panel lists an issue's comments; members and admins add new ones.
+- **People:** assignees, avatars and "My issues" use the workspace's real members.
+- **Sample data:** Reset demo data restores the workspace's sample projects on the server, for everyone; projects people created stay.
 - **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
 - **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-Projects, sprints and issues still use the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+Reports still compute from the loaded sprints and issues; the API's own burndown, velocity and history (and Live Sync) come in later steps ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
@@ -141,6 +145,7 @@ All API access lives in [`lib/api/`](lib/api/):
 | `auth.ts` | Typed calls for sign-in, sign-up, logout, password reset, OAuth URLs, profile and access tokens |
 | `session.ts` | `useSession()`: who is signed in, shared by the session gate, sidebar and profile |
 | `workspace.ts` | Typed calls for workspaces, members, roles and invites |
+| `tracker.ts` | Typed calls for projects, workflow, issues, sprints, comments and the sample-data reset |
 | `permissions.ts` | `usePermissions()`: what your role in the current workspace allows |
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
