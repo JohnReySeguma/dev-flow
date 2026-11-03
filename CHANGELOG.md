@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-11-03
+
+Step 10 of the API integration: the final contract review against API `v2.0.0`, the stable contract (unchanged since `beta.5`). DevFlow now runs on the API by default.
+
+### Changed
+
+- **Breaking (setup):** `.env.example` points at the local API (`http://localhost:4000/api/v2`), so a fresh `.env.local` runs in API mode. Demo mode is what an empty or unset `NEXT_PUBLIC_API_URL` gives, as before, so a hosted copy without an API still works.
+- The README leads with API mode, keeps demo mode as the no-backend option and lists the known limitations.
+- Types are generated from the API's `v2.0.0` tag (identical to `beta.5`); `docs/openapi.json` and `docs/API_BRIEF.md` are synced with it.
+
+### Added
+
+- ⌘K jump opens issues done in completed sprints, which boards don't load, by asking the API for the key or number.
+
 ## [1.9.0] - 2026-11-03
 
 Step 9 of the API integration: Live Sync and GitHub (API `v2.0.0-beta.5`).
@@ -186,6 +200,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[2.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.6.0...v1.7.0
