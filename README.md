@@ -123,13 +123,14 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Profile:** your profile and personal access tokens; each token works in one workspace, picked when you generate it.
 - **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation. Sign-up opens your new workspace; accepting an invite opens the inviting one.
 - **Projects, boards and backlogs:** each workspace's projects, workflow columns, sprints and issues load from the API when you open it (switching workspaces loads the other one). Creating, editing, dragging, ranking and deleting issues, editing columns and projects, and planning, starting and completing sprints all save to the server. Changes show at once; if the server refuses one, the project reloads and a notice says why.
+- **Reports:** the burndown, velocity and sprint history come from the API, which counts from the issue history (re-estimated, reopened and removed issues included); they refresh after your changes reach the server.
 - **Comments:** the issue panel lists an issue's comments; members and admins add new ones.
 - **People:** assignees, avatars and "My issues" use the workspace's real members.
 - **Sample data:** Reset demo data restores the workspace's sample projects on the server, for everyone; projects people created stay.
 - **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
 - **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-Reports still compute from the loaded sprints and issues; the API's own burndown, velocity and history (and Live Sync) come in later steps ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+Live Sync, invites for existing accounts and email verification come in later steps ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
@@ -145,7 +146,7 @@ All API access lives in [`lib/api/`](lib/api/):
 | `auth.ts` | Typed calls for sign-in, sign-up, logout, password reset, OAuth URLs, profile and access tokens |
 | `session.ts` | `useSession()`: who is signed in, shared by the session gate, sidebar and profile |
 | `workspace.ts` | Typed calls for workspaces, members, roles and invites |
-| `tracker.ts` | Typed calls for projects, workflow, issues, sprints, comments and the sample-data reset |
+| `tracker.ts` | Typed calls for projects, workflow, issues, sprints, comments, reports and the sample-data reset |
 | `permissions.ts` | `usePermissions()`: what your role in the current workspace allows |
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |

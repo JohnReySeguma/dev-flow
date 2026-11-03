@@ -71,3 +71,12 @@ export type CarryOverRequest = Schemas["CarryOver"];
 export type CompletedSprint = Schemas["CompletedSprint"];
 export type Comment = Schemas["Comment"];
 export type CommentPage = Schemas["CommentPage"];
+
+/* Reports. */
+
+/** One point per sprint day; `remaining` is null for days still ahead. */
+export type Burndown = Schemas["Burndown"];
+/** The most recent completed sprints, oldest first. */
+export type Velocity = Schemas["Velocity"];
+/** Completed sprints, newest first, paged. */
+export type SprintHistory = Schemas["SprintHistory"];

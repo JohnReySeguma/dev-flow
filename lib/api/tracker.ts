@@ -5,6 +5,7 @@ import type {
   ApiProject,
   ApiSprint,
   Bootstrap,
+  Burndown,
   CarryOverRequest,
   Comment,
   CommentPage,
@@ -13,10 +14,12 @@ import type {
   CreateProjectRequest,
   MoveIssueRequest,
   ProjectSnapshot,
+  SprintHistory,
   StartSprintRequest,
   UpdateIssueRequest,
   UpdateProjectRequest,
   UpdateStatusRequest,
+  Velocity,
 } from "./types";
 
 /*
@@ -118,6 +121,27 @@ export const startSprint = (slug: string, id: string, body: StartSprintRequest) 
 /** Active only. Unfinished issues move as `carryOver` says; re-fetch the snapshot afterwards. */
 export const completeSprint = (slug: string, id: string, carryOver: CarryOverRequest) =>
   apiFetch<CompletedSprint>(sprint(slug, id, "/complete"), { method: "POST", body: { carryOver } });
+
+/* ------------------------------------------------------------------ reports */
+
+/** Remaining points per day from the issue history (re-estimates and reopened issues included); planned: no days. */
+export const getBurndown = (slug: string, id: string) => apiFetch<Burndown>(sprint(slug, id, "/burndown"));
+
+/** The last `limit` completed sprints, oldest first. */
+export const getVelocity = (slug: string, key: string, limit = 8) =>
+  apiFetch<Velocity>(project(slug, key, "/reports/velocity"), { query: { limit } });
+
+/** Every completed sprint, newest first. */
+export async function listSprintHistory(slug: string, key: string): Promise<ApiSprint[]> {
+  const sprints: ApiSprint[] = [];
+  let cursor: string | null = null;
+  do {
+    const page: SprintHistory = await apiFetch<SprintHistory>(project(slug, key, "/reports/history"), { query: { limit: 100, cursor } });
+    sprints.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+  return sprints;
+}
 
 /* --------------------------------------------------------------------- demo */
 

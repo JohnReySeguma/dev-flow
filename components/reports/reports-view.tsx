@@ -2,15 +2,19 @@
 
 import { ChartNoAxesColumn } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useProject } from "@/components/project/project-context";
-import { buttonStyles } from "@/components/ui/button";
+import { Button, buttonStyles } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
+import { isApiMode } from "@/lib/api/config";
+import { errorMessage } from "@/lib/api/errors";
+import { getBurndown, getVelocity, listSprintHistory } from "@/lib/api/tracker";
 import { activeSprint, isDone, progressOf, projectSprints, sprintIssues } from "@/lib/tracker/selectors";
-import { useTracker } from "@/lib/tracker/store";
+import { useSyncedRevision, useTracker } from "@/lib/tracker/store";
 import type { Issue, Project, Sprint } from "@/lib/tracker/types";
 import { useNow } from "@/lib/use-now";
 import { formatDate } from "@/lib/utils";
-import { BurndownChart, LegendItem, SERIES_1, SERIES_2, VelocityChart, type BurndownDay } from "./charts";
+import { BurndownChart, LegendItem, SERIES_1, SERIES_2, VelocityChart, type BurndownDay, type VelocityPoint } from "./charts";
 import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 const DAY = 86_400_000;
@@ -35,21 +39,58 @@ function burndown(project: Project, sprint: Sprint, issues: Issue[], now: number
   });
 }
 
+/** What the charts and the history table show. `completed`: completed sprints with a report, oldest first. */
+type ReportData = { days: BurndownDay[]; velocity: VelocityPoint[]; completed: Sprint[] };
+
+type Remote = { status: "loading" } | { status: "ready"; data: ReportData } | { status: "error"; error: unknown };
+
+/** Sprints created on this screen keep a temporary id until the project is re-fetched; the API doesn't know it yet. */
+const isLocalId = (id: string) => id.startsWith("sprint-");
+
+/**
+ * API mode: the server's burndown (from the issue history, so re-estimates and reopened issues count), velocity and
+ * history. Re-fetched whenever the server has caught up with a change made here, keeping the last numbers meanwhile.
+ */
+function useApiReports(slug: string, projectKey: string, sprintId: string | null): Remote & { retry: () => void } {
+  const revision = useSyncedRevision();
+  const [remote, setRemote] = useState<Remote>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!isApiMode()) return;
+    let active = true;
+    const burndown = sprintId && !isLocalId(sprintId) ? getBurndown(slug, sprintId).then((b) => b.days) : Promise.resolve([]);
+    Promise.all([burndown, getVelocity(slug, projectKey, 8), listSprintHistory(slug, projectKey)])
+      .then(([days, velocity, history]) => {
+        if (!active) return;
+        const completed = history.filter((s) => s.report).reverse() as Sprint[];
+        setRemote({ status: "ready", data: { days, velocity, completed } });
+      })
+      .catch((error: unknown) => active && setRemote({ status: "error", error }));
+    return () => {
+      active = false;
+    };
+  }, [slug, projectKey, sprintId, revision, attempt]);
+
+  return {
+    ...remote,
+    retry: () => {
+      setRemote({ status: "loading" });
+      setAttempt((a) => a + 1);
+    },
+  };
+}
+
 export function ReportsView() {
-  const { href } = useWorkspaceRoute();
+  const { href, slug } = useWorkspaceRoute();
   const { project } = useProject();
   const state = useTracker();
   const now = useNow();
   const sprint = activeSprint(state, project.id);
-  const completed = projectSprints(state, project.id).filter((s) => s.status === "completed" && s.report);
-  const recent = completed.slice(-8);
-  const velocity = recent.map((s) => ({ name: s.name, committed: s.report!.committedPoints, completed: s.report!.completedPoints }));
-  const lastThree = recent.slice(-3);
-  const avgVelocity = lastThree.length
-    ? Math.round(lastThree.reduce((sum, s) => sum + s.report!.completedPoints, 0) / lastThree.length)
-    : null;
+  const localCompleted = projectSprints(state, project.id).filter((s) => s.status === "completed" && s.report);
+  const remote = useApiReports(slug, project.key, sprint?.id ?? null);
 
-  if (!sprint && completed.length === 0) {
+  if (!sprint && localCompleted.length === 0) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <span className="flex size-11 items-center justify-center rounded-xl border border-line-strong bg-elevated text-zinc-400">
@@ -68,7 +109,15 @@ export function ReportsView() {
 
   const issues = sprint ? sprintIssues(state, sprint.id) : [];
   const progress = progressOf(project, issues);
-  const days = sprint ? burndown(project, sprint, issues, now) : [];
+  const local: ReportData = {
+    days: sprint ? burndown(project, sprint, issues, now) : [],
+    velocity: localCompleted.slice(-8).map((s) => ({ name: s.name, committed: s.report!.committedPoints, completed: s.report!.completedPoints })),
+    completed: localCompleted,
+  };
+  const data = !isApiMode() ? local : remote.status === "ready" ? remote.data : null;
+  const { days, velocity, completed } = data ?? { days: [], velocity: [], completed: [] };
+  const lastThree = velocity.slice(-3);
+  const avgVelocity = lastThree.length ? Math.round(lastThree.reduce((sum, v) => sum + v.completed, 0) / lastThree.length) : null;
   const daysLeft = sprint?.endAt ? Math.max(0, Math.ceil((Date.parse(sprint.endAt) - now) / DAY)) : null;
 
   return (
@@ -77,9 +126,29 @@ export function ReportsView() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Active sprint" value={sprint?.name ?? "None"} sub={sprint ? `${daysLeft}d left` : "Plan one in the backlog"} />
           <Stat label="Points done" value={sprint ? `${progress.donePoints} / ${progress.totalPoints}` : "—"} sub={sprint ? `${progress.doneIssues} of ${progress.totalIssues} issues` : ""} />
-          <Stat label="Avg velocity" value={avgVelocity === null ? "—" : `${avgVelocity} pts`} sub={lastThree.length ? `Last ${lastThree.length} sprints` : "No completed sprints"} />
-          <Stat label="Sprints completed" value={`${completed.length}`} sub={completed.length ? `Latest: ${completed[completed.length - 1].name}` : ""} />
+          <Stat label="Avg velocity" value={!data ? "…" : avgVelocity === null ? "—" : `${avgVelocity} pts`} sub={!data ? "" : lastThree.length ? `Last ${lastThree.length} sprints` : "No completed sprints"} />
+          <Stat label="Sprints completed" value={!data ? "…" : `${completed.length}`} sub={completed.length ? `Latest: ${completed[completed.length - 1].name}` : ""} />
         </div>
+
+        {isApiMode() && remote.status === "loading" && (
+          <div role="status" aria-busy="true" className="flex flex-col gap-5">
+            <span className="sr-only">Loading reports…</span>
+            <div aria-hidden className="h-72 animate-pulse rounded-xl border border-line bg-surface" />
+            <div aria-hidden className="h-64 animate-pulse rounded-xl border border-line bg-surface" />
+          </div>
+        )}
+        {isApiMode() && remote.status === "error" && (
+          <Section title="Reports" description="We couldn't load the reports.">
+            <div className="flex flex-wrap items-center gap-3">
+              <p role="alert" className="text-[13px] text-red-300">
+                {errorMessage(remote.error)}
+              </p>
+              <Button variant="secondary" onClick={remote.retry}>
+                Try again
+              </Button>
+            </div>
+          </Section>
+        )}
 
         {sprint && days.length > 0 && (
           <Section
