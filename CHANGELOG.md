@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-11-03
+
+### Changed
+
+- The GitHub integration is now the first section after the hero, and first in the navigation and footer.
+
+### Removed
+
+- The "Under the hood" tech stack section and its navigation and footer links.
+
 ## [2.1.0] - 2026-11-03
 
 ### Added
@@ -214,6 +224,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[2.1.1]: https://github.com/JohnReySeguma/dev-flow/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/JohnReySeguma/dev-flow/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/JohnReySeguma/dev-flow/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.9.0...v2.0.0
