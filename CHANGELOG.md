@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-11-03
+
+Step 8 of the API integration: email verification (API `v2.0.0-beta.5`).
+
+### Added
+
+- A new `/verify-email` page for the link emailed after a password sign-up: it confirms the address (once per link) and continues into the app. A used, replaced or expired link says so; signed in and still unverified, "Send a new link" mails a fresh one, and an account already verified is told it needn't do anything.
+- A "Verify your email" banner above the app while the account's address is unverified and the server delivers email, with Resend. It disappears once the address is verified.
+
+### Changed
+
+- Inviting from an unverified account explains that the address must be verified first (`EMAIL_UNVERIFIED`). Rate limits on sign-ups, new workspaces and invites (`RATE_LIMITED`) show how long to wait and keep the form's input, as other limits already did.
+
 ## [1.7.0] - 2026-11-03
 
 Step 7 of the API integration: invites for people who already have an account (API `v2.0.0-beta.5`).
@@ -158,6 +171,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.8.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.4.0...v1.5.0
