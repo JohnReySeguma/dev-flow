@@ -4,6 +4,9 @@ import { ProjectsOverview } from "@/components/projects/projects-overview";
 
 export const metadata: Metadata = { title: "Projects" };
 
+// Renders behind the browser-only session and workspace gates: see app/(app)/layout.tsx.
+export const instant = false;
+
 export default function ProjectsPage() {
   return (
     <PageContainer>
