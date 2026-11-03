@@ -5,6 +5,21 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-11-03
+
+Step 9 of the API integration: Live Sync and GitHub (API `v2.0.0-beta.5`).
+
+### Added
+
+- Live Sync: teammates' changes to issues, sprints, workflow columns and projects appear without a reload, over the API's Socket.IO `/realtime` connection. Your own changes aren't applied twice. After a reconnect the projects are re-fetched, since missed events aren't replayed. Losing access to the workspace (`membership.ended`) moves you to another one.
+- The Live Sync pill shows the real connection (connecting, reconnecting), and the project header shows who has the project open.
+- GitHub in workspace settings: see the connected accounts; admins connect the DevFlow GitHub App (through GitHub and back, with a message for `?github=linked` and every `?github_error=`) and disconnect it. The shared demo workspace can't be connected.
+- Pull request and commit links made by GitHub arrive live with a "via GitHub" notice; a merged pull request moves the issue to done.
+
+### Dependencies
+
+- `socket.io-client` 4.8.4.
+
 ## [1.8.0] - 2026-11-03
 
 Step 8 of the API integration: email verification (API `v2.0.0-beta.5`).
@@ -171,6 +186,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.9.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.5.0...v1.6.0
