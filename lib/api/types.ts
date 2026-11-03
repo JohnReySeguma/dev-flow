@@ -49,3 +49,25 @@ export type TeamMemberPage = Schemas["TeamMemberPage"];
 export type InviteRequest = Schemas["InviteRequest"];
 export type InvitePreview = Schemas["InvitePreview"];
 export type AcceptInviteRequest = Schemas["AcceptInviteRequest"];
+
+/* Projects, workflow, issues, sprints and comments, all inside a workspace. */
+
+/** `{ me, workspace, config, projects }`, loaded once per workspace. */
+export type Bootstrap = Schemas["Bootstrap"];
+/** `{ project, sprints, issues }`: one project, its sprints by number and its open issues in rank order. */
+export type ProjectSnapshot = Schemas["ProjectSnapshot"];
+export type ApiProject = Schemas["Project"];
+export type ApiIssue = Schemas["Issue"];
+export type ApiSprint = Schemas["Sprint"];
+export type CreateProjectRequest = Schemas["CreateProjectRequest"];
+export type UpdateProjectRequest = Schemas["UpdateProjectRequest"];
+export type CreateIssueRequest = Schemas["CreateIssueRequest"];
+export type UpdateIssueRequest = Schemas["UpdateIssueRequest"];
+export type MoveIssueRequest = Schemas["MoveIssueRequest"];
+export type AddStatusRequest = Schemas["AddStatusRequest"];
+export type UpdateStatusRequest = Schemas["UpdateStatusRequest"];
+export type StartSprintRequest = Schemas["StartSprintRequest"];
+export type CarryOverRequest = Schemas["CarryOver"];
+export type CompletedSprint = Schemas["CompletedSprint"];
+export type Comment = Schemas["Comment"];
+export type CommentPage = Schemas["CommentPage"];
