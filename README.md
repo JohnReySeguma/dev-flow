@@ -56,7 +56,7 @@ Out of the box there is no backend: demo data lives in the browser and can be re
 ```
 app/
   (marketing)/      landing, privacy, terms, security, status
-  (auth)/           login, signup, invite, reset-password
+  (auth)/           login, signup, invite, reset-password, verify-email
   (app)/            signed-in shell (sidebar)
     w/[slug]/       one workspace (demo mode: acme-inc)
       projects/     overview + [key]/{board,backlog,reports,settings}
@@ -118,6 +118,8 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Accounts:** real sign-in, sign-up and logout; the app checks the session on load and sends signed-out visitors to `/login` (returning them afterwards). Expired access tokens are renewed transparently, one refresh at a time.
 - **Sign-in options:** only the OAuth providers `GET /config` enables (none if the API is unreachable; email sign-in always stays available). GitHub and Google redirect through the API and back.
 - **Password reset:** "Forgot password?" emails a link to the new `/reset-password` page.
+- **Email verification:** password sign-ups get a link to `/verify-email`. Until it's opened, a banner offers to resend it, and inviting people is refused (only while the server really sends email, `GET /config` → `email: true`).
+- **Limits:** when the server rate-limits (sign-ups, new workspaces, invites…), forms keep what you typed and say how long to wait.
 - **Workspaces:** every page of a workspace lives under `/w/<slug>/…`. The sidebar switcher lists your workspaces with your role in each and creates new ones (optionally with sample projects); `/welcome` greets accounts without any. The app reopens the workspace you used last if it is still yours. Old links like `/projects` redirect into it.
 - **Workspace settings:** admins rename (the URL stays) and delete a workspace; anyone can leave it. Losing access, here or from another tab, moves you to another workspace.
 - **Profile:** your profile and personal access tokens; each token works in one workspace, picked when you generate it.
@@ -130,7 +132,7 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
 - **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-Live Sync and email verification come in later steps ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+Live Sync and GitHub come in a later step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
