@@ -208,7 +208,7 @@ export interface paths {
                 /** @description Signed up and signed in. */
                 201: {
                     headers: {
-                        /** @description `devflow_access` (Path=/api/v1) and `devflow_refresh` (Path=/api/v1/auth); both HttpOnly, Secure, SameSite=Lax. */
+                        /** @description `devflow_access` (Path=/api/v2) and `devflow_refresh` (Path=/api/v2/auth); both HttpOnly, Secure, SameSite=Lax. */
                         "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
@@ -275,7 +275,7 @@ export interface paths {
                 /** @description Signed in. */
                 200: {
                     headers: {
-                        /** @description `devflow_access` (Path=/api/v1) and `devflow_refresh` (Path=/api/v1/auth); both HttpOnly, Secure, SameSite=Lax. */
+                        /** @description `devflow_access` (Path=/api/v2) and `devflow_refresh` (Path=/api/v2/auth); both HttpOnly, Secure, SameSite=Lax. */
                         "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
@@ -338,7 +338,7 @@ export interface paths {
                 /** @description New cookies set. */
                 204: {
                     headers: {
-                        /** @description `devflow_access` (Path=/api/v1) and `devflow_refresh` (Path=/api/v1/auth); both HttpOnly, Secure, SameSite=Lax. */
+                        /** @description `devflow_access` (Path=/api/v2) and `devflow_refresh` (Path=/api/v2/auth); both HttpOnly, Secure, SameSite=Lax. */
                         "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
@@ -559,6 +559,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify the email address with the emailed token
+         * @description Public: the token is the credential. Sign-up emails a link to {CORS_ORIGIN}/verify-email?token=…, valid for 48 hours; only the newest link works. Errors: 400 VERIFY_TOKEN_INVALID, 422 VALIDATION_FAILED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailRequest"];
+                };
+            };
+            responses: {
+                /** @description Email verified. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a new verification link
+         * @description Signed-in session only. Always 202; nothing is sent when the address is already verified. Earlier links stop working.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A link is on its way if the address still needs verifying. */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/oauth/{provider}": {
         parameters: {
             query?: never;
@@ -633,7 +755,7 @@ export interface paths {
         };
         /**
          * OAuth callback (called by the provider)
-         * @description Registered with GitHub and Google as {API_URL}/api/v1/auth/oauth/{provider}/callback. Always redirects to the frontend.
+         * @description Registered with GitHub and Google as {API_URL}/api/auth/oauth/{provider}/callback, outside /api/v2 so new API versions keep the registered URL. Always redirects to the frontend.
          */
         get: {
             parameters: {
@@ -650,7 +772,7 @@ export interface paths {
                 /** @description Redirect to the frontend. */
                 302: {
                     headers: {
-                        /** @description `devflow_access` (Path=/api/v1) and `devflow_refresh` (Path=/api/v1/auth); both HttpOnly, Secure, SameSite=Lax. */
+                        /** @description `devflow_access` (Path=/api/v2) and `devflow_refresh` (Path=/api/v2/auth); both HttpOnly, Secure, SameSite=Lax. */
                         "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
@@ -808,7 +930,7 @@ export interface paths {
         head?: never;
         /**
          * Update your profile
-         * @description Any of name (max 48), gradient (one of the frontend AVATAR_GRADIENTS), timezone (IANA) and bio (max 280). Send If-Match with the ETag you read to get 412 CONFLICT_STALE instead of overwriting a newer change. Session only: 403 FORBIDDEN with a bearer token.
+         * @description Any of name (max 48), gradient (one of the frontend AVATAR_GRADIENTS), timezone (IANA) and bio (max 280). Send If-Match with the ETag you read to get 412 CONFLICT_STALE instead of overwriting a newer change. Session only: 403 FORBIDDEN with a bearer token. 403 DEMO_ACCOUNT_LOCKED for the shared demo accounts.
          */
         patch: {
             parameters: {
@@ -922,7 +1044,7 @@ export interface paths {
         put?: never;
         /**
          * Generate a token
-         * @description The secret is returned once and never again; only its hash and last four characters are stored. expiresInDays: 1 to 365, or null for no expiry. Session only.
+         * @description The secret is returned once and never again; only its hash and last four characters are stored. The token works in `workspace` only (422 if you are not a member). expiresInDays: 1 to 365, or null for no expiry. Session only. 403 DEMO_ACCOUNT_LOCKED for the shared demo accounts.
          */
         post: {
             parameters: {
@@ -988,7 +1110,7 @@ export interface paths {
         post?: never;
         /**
          * Revoke a token
-         * @description Takes effect immediately. 404 NOT_FOUND if it is not one of your tokens. Session only.
+         * @description Takes effect immediately. 404 NOT_FOUND if it is not one of your tokens. Session only. 403 DEMO_ACCOUNT_LOCKED for the shared demo accounts.
          */
         delete: {
             parameters: {
@@ -1037,65 +1159,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/workspace": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The workspace and your role in it */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The workspace. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Workspace"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspace/members": {
+    "/workspaces": {
         parameters: {
             query?: never;
             header?: never;
@@ -1103,8 +1167,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Members and pending invites
-         * @description Oldest first. Pending invites have status `invited` and lastActiveAt null. Any role.
+         * Your workspaces
+         * @description Every workspace you belong to, with your role in each, oldest membership first (GET /auth/me has the same list unpaginated). Signed-in session only.
          */
         get: {
             parameters: {
@@ -1118,13 +1182,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description A page of members. */
+                /** @description A page of workspaces. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamMemberPage"];
+                        "application/json": components["schemas"]["WorkspacePage"];
                     };
                 };
                 /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
@@ -1152,137 +1216,9 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspace/members/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
         /**
-         * Remove a member or revoke an invite
-         * @description Admins only, signed-in session only. Removing a member deletes their account, sessions and access tokens immediately; there is no undo. Errors: 403 CANNOT_REMOVE_SELF, 409 LAST_ADMIN, 404 NOT_FOUND.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Removed. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Change a member's or invite's role
-         * @description Admins only, signed-in session only. Errors: 403 CANNOT_CHANGE_OWN_ROLE, 409 LAST_ADMIN (demoting the last active admin), 404 NOT_FOUND. Last write wins: no If-Match.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ChangeRoleRequest"];
-                };
-            };
-            responses: {
-                /** @description The updated member. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TeamMember"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/workspace/invites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Invite someone by email
-         * @description Admins only, signed-in session only. Emails a single-use link to {CORS_ORIGIN}/invite?token=… that expires after 7 days. Errors: 409 ALREADY_MEMBER (already a member or already invited), 502 EMAIL_DELIVERY_FAILED (the invite is kept; use resend).
+         * Create a workspace
+         * @description You become its admin. With sampleData (the default) it starts with a copy of the sample projects DEV, BIL and MOB: the demo admin's issues are yours, the rest unassigned, no comments. The slug comes from the name and gets a short suffix when taken. Signed-in session only. 403 DEMO_ACCOUNT_LOCKED for the shared demo accounts.
          */
         post: {
             parameters: {
@@ -1293,140 +1229,18 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["InviteRequest"];
+                    "application/json": components["schemas"]["CreateWorkspaceRequest"];
                 };
             };
             responses: {
-                /** @description The pending invite. */
+                /** @description The new workspace. */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamMember"];
+                        "application/json": components["schemas"]["Workspace"];
                     };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspace/invites/{id}/resend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Re-send an invite
-         * @description Admins only. Sends a new link valid for 7 days; earlier links stop working. 404 NOT_FOUND if the invite was accepted or revoked; 502 EMAIL_DELIVERY_FAILED.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The pending invite. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TeamMember"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspace/demo/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Restore the demo projects
-         * @description Admins only, signed-in session only. Replaces every project, sprint and issue with a fresh copy of the demo data (DEV, BIL, MOB), dated relative to now; accounts are untouched. 404 NOT_FOUND unless the server runs with SEED_DEMO_DATA=true. Re-fetch /bootstrap afterwards.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Demo data restored. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
                 };
                 /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
                 429: {
@@ -1467,7 +1281,7 @@ export interface paths {
         };
         /**
          * Preview an invite
-         * @description Public; for the /invite page. 400 INVITE_INVALID when the link is unknown, already used, replaced by a resend or expired.
+         * @description Public; for the /invite page. accountExists says which way to continue: false → accept (create the account), true → sign in with that email and join. 400 INVITE_INVALID when the link is unknown, already used, replaced by a resend or expired.
          */
         get: {
             parameters: {
@@ -1532,7 +1346,7 @@ export interface paths {
         put?: never;
         /**
          * Accept an invite
-         * @description Public. Creates the account for the invited email with the invited role and signs it in (session cookies). Errors: 400 INVITE_INVALID, 409 ALREADY_MEMBER (the email already has an account: sign in instead), 422 VALIDATION_FAILED.
+         * @description Public, for people without an account. Creates the account for the invited email, a member of the inviting workspace only (no workspace of its own), verified, and signs it in (session cookies). Errors: 400 INVITE_INVALID, 409 EMAIL_TAKEN (the email already has an account: sign in and join instead), 422 VALIDATION_FAILED.
          */
         post: {
             parameters: {
@@ -1590,657 +1404,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Projects in the workspace, with summaries
-         * @description Oldest first, each with active-sprint progress, backlog count and lead (as on the Projects overview). Any role; tokens need issues:read.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of projects. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectPage"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Create a project
-         * @description Members and admins; tokens need projects:admin. The key is upper-cased, must match ^[A-Z]{2,5}$ and cannot change later. Creates the default workflow (To Do, In Progress, In Review, Done); the creator leads the project. Errors: 409 PROJECT_KEY_TAKEN, 422 VALIDATION_FAILED.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateProjectRequest"];
-                };
-            };
-            responses: {
-                /** @description The new project. */
-                201: {
-                    headers: {
-                        /** @description Version of the project; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** A project with its workflow */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Project key, any case. */
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The project. */
-                200: {
-                    headers: {
-                        /** @description Version of the project; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        /**
-         * Delete a project
-         * @description Admins only; tokens need projects:admin. Deletes its workflow, sprints, issues and comments.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Project key, any case. */
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Rename or describe a project
-         * @description Members and admins; tokens need projects:admin. The key is immutable. Optional If-Match → 412 CONFLICT_STALE.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: {
-                    "If-Match"?: string;
-                };
-                path: {
-                    /** @description Project key, any case. */
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["UpdateProjectRequest"];
-                };
-            };
-            responses: {
-                /** @description The updated project. */
-                200: {
-                    headers: {
-                        /** @description Version of the project; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/projects/{key}/snapshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Everything to render a project
-         * @description The project with its workflow, all its sprints by number (completed ones with their report) and every issue in the backlog or a planned/active sprint, in rank order. Completed sprints' issues are left out. Not paginated. Re-fetch after reconnecting to realtime.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Project key, any case. */
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The project snapshot. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectSnapshot"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}/issues": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Issues of a project, in rank order
-         * @description Any role; tokens need issues:read. Filters combine with AND.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    /** @description A sprint id, `backlog` (no sprint) or `active` (the active sprint). */
-                    sprint?: "backlog" | "active" | string;
-                    /** @description A user id, or `none` for unassigned. */
-                    assignee?: "none" | string;
-                    priority?: "urgent" | "high" | "medium" | "low";
-                    type?: "story" | "bug" | "task";
-                    /** @description Matches the key, title or description. */
-                    q?: string;
-                    /** @description `true` = assigned to you. */
-                    mine?: "true" | "false";
-                };
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of issues. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["IssuePage"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Create an issue
-         * @description Members and admins; tokens need issues:write. Gets the next key (DEV-134) atomically and goes to the top of the ranking. statusId defaults to the first to-do status. sprintId must be a planned or active sprint of the project; assigneeId a workspace member.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateIssueRequest"];
-                };
-            };
-            responses: {
-                /** @description The new issue. */
-                201: {
-                    headers: {
-                        /** @description Version of the issue; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Issue"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/issues/{issueKey}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * An issue by key
-         * @description Any role; tokens need issues:read. A bare number needs ?project=KEY (422 otherwise).
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Project key; required when :issueKey is a bare number such as 104. */
-                    project?: string;
-                };
-                header?: never;
-                path: {
-                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
-                    issueKey: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The issue. */
-                200: {
-                    headers: {
-                        /** @description Version of the issue; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Issue"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        /**
-         * Delete an issue
-         * @description Members and admins; tokens need issues:write. Its number is not reused.
-         */
-        delete: {
-            parameters: {
-                query?: {
-                    /** @description Project key; required when :issueKey is a bare number such as 104. */
-                    project?: string;
-                };
-                header?: never;
-                path: {
-                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
-                    issueKey: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Update an issue
-         * @description Members and admins; tokens need issues:write. Moving into a done-category status sets resolvedAt; moving out clears it. Optional If-Match → 412 CONFLICT_STALE. For board drops and ranking use POST /issues/{issueKey}/move.
-         */
-        patch: {
-            parameters: {
-                query?: {
-                    /** @description Project key; required when :issueKey is a bare number such as 104. */
-                    project?: string;
-                };
-                header?: {
-                    "If-Match"?: string;
-                };
-                path: {
-                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
-                    issueKey: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["UpdateIssueRequest"];
-                };
-            };
-            responses: {
-                /** @description The updated issue. */
-                200: {
-                    headers: {
-                        /** @description Version of the issue; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Issue"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/issues/{issueKey}/move": {
+    "/invites/{token}/join": {
         parameters: {
             query?: never;
             header?: never;
@@ -2250,172 +1414,27 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Move an issue (board drop, backlog drag, ranking)
-         * @description Members and admins; tokens need issues:write. Changes statusId and/or sprintId and re-ranks the issue without renumbering others. Placement rules: see MoveIssueRequest.
-         */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Project key; required when :issueKey is a bare number such as 104. */
-                    project?: string;
-                };
-                header?: never;
-                path: {
-                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
-                    issueKey: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["MoveIssueRequest"];
-                };
-            };
-            responses: {
-                /** @description The moved issue. */
-                200: {
-                    headers: {
-                        /** @description Version of the issue; send it back as If-Match. */
-                        ETag?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Issue"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}/statuses": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add a status (board column)
-         * @description Admins only; tokens need projects:admin. Inserted before the first done status, unless its category is done (then last).
+         * Join with an existing account
+         * @description For people who already have an account: sign in with the invited email first. Adds you to the inviting workspace with the invited role and marks your email verified. Signed-in session only. Errors: 400 INVITE_INVALID, 403 INVITE_EMAIL_MISMATCH (signed in with another account), 403 DEMO_ACCOUNT_LOCKED, 409 ALREADY_MEMBER.
          */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["AddStatusRequest"];
-                };
-            };
-            responses: {
-                /** @description The project with its updated workflow. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}/statuses/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete a status
-         * @description Admins only. Moves its issues to ?moveTo= (required when it has issues), then deletes it. 409 STATUS_DELETE_BLOCKED keeps at least two statuses and at least one to-do and one done status.
-         */
-        delete: {
-            parameters: {
-                query?: {
-                    /** @description Status that receives the deleted status's issues. Required when it has issues. */
-                    moveTo?: string;
-                };
-                header?: never;
-                path: {
-                    key: string;
-                    id: string;
+                    token: string;
                 };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description The project with its updated workflow. */
+                /** @description The workspace you joined, with your role. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Project"];
+                        "application/json": components["schemas"]["Workspace"];
                     };
                 };
                 /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
@@ -2442,863 +1461,6 @@ export interface paths {
                 };
             };
         };
-        options?: never;
-        head?: never;
-        /**
-         * Rename a status or change its category
-         * @description Admins only. Changing into or out of done sets or clears resolvedAt on its issues. 409 STATUS_UPDATE_BLOCKED when it would leave the workflow without a to-do or done status.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    key: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["UpdateStatusRequest"];
-                };
-            };
-            responses: {
-                /** @description The project with its updated workflow. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/projects/{key}/statuses/order": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Reorder the workflow
-         * @description Admins only. 422 unless statusIds lists every status of the project exactly once.
-         */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ReorderStatusesRequest"];
-                };
-            };
-            responses: {
-                /** @description The project with its updated workflow. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/issues/{issueKey}/comments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * An issue's comment thread
-         * @description Oldest first. Any role; tokens need issues:read.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    /** @description Project key; required when :issueKey is a bare number such as 104. */
-                    project?: string;
-                };
-                header?: never;
-                path: {
-                    issueKey: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of comments. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CommentPage"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Comment on an issue
-         * @description Members and admins; tokens need issues:write. The body is Markdown, stored as written; sanitise it when rendering. Increments the issue's comments count.
-         */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Project key; required when :issueKey is a bare number such as 104. */
-                    project?: string;
-                };
-                header?: never;
-                path: {
-                    issueKey: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateCommentRequest"];
-                };
-            };
-            responses: {
-                /** @description The new comment. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Comment"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}/sprints": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Sprints of a project, by number
-         * @description Any role; tokens need issues:read.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Comma-separated filter, e.g. planned,active. */
-                    status?: string;
-                    limit?: number;
-                    cursor?: string;
-                };
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of sprints. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SprintPage"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Create the next sprint
-         * @description Members and admins; tokens need issues:write. Creates `Sprint {n+1}` in the planned state. No body.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The new sprint. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Sprint"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sprints/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete a planned sprint
-         * @description Members and admins; tokens need issues:write. Its issues return to the backlog. 409 SPRINT_NOT_PLANNED for active or completed sprints.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Rename a sprint or set its goal
-         * @description Members and admins; tokens need issues:write.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["UpdateSprintRequest"];
-                };
-            };
-            responses: {
-                /** @description The updated sprint. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Sprint"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/sprints/{id}/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Start a planned sprint
-         * @description Members and admins; tokens need issues:write. Starts now and ends after durationDays (1 to 28); committedPoints snapshots the points in the sprint. 409 SPRINT_ALREADY_ACTIVE when another sprint of the project is running, 409 SPRINT_NOT_PLANNED when this one is not planned.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["StartSprintRequest"];
-                };
-            };
-            responses: {
-                /** @description The started sprint. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Sprint"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sprints/{id}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Complete the active sprint
-         * @description Members and admins; tokens need issues:write. In one transaction: writes the report, marks the sprint completed and moves issues not in a done status to carryOver (the backlog, a planned sprint, or a new sprint it creates). 409 SPRINT_NOT_ACTIVE when this sprint is not the active one.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CompleteSprintRequest"];
-                };
-            };
-            responses: {
-                /** @description The completed sprint and the carry-over target. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CompletedSprint"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sprints/{id}/burndown": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Burndown of a sprint
-         * @description One point per sprint day from the issue history: ideal falls from committedPoints to zero; remaining is the points still open in the sprint at that moment, null for days still ahead. A completed sprint is read just before it completed. Empty days for a sprint that has not started. Any role; tokens need issues:read.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The burndown. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Burndown"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}/reports/velocity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Velocity of recent sprints
-         * @description Committed against completed points for the last `limit` completed sprints, oldest first.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description How many recent sprints. */
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The velocity series. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Velocity"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/projects/{key}/reports/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Sprint history
-         * @description Completed sprints with goal, dates and report, newest first.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                };
-                header?: never;
-                path: {
-                    key: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of completed sprints. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SprintHistory"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/bootstrap": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Everything the app shell needs after sign-in
-         * @description The signed-in user, the workspace with your role, the feature flags and every project with its summary, in one call. Any role; tokens need issues:read.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The bootstrap payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Bootstrap"];
-                    };
-                };
-                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
-                429: {
-                    headers: {
-                        /** @description Seconds until the limit resets. */
-                        "Retry-After"?: number;
-                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
-                        RateLimit?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Error, as RFC 9457 problem details. */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3316,7 +1478,7 @@ export interface paths {
         put?: never;
         /**
          * GitHub App webhook
-         * @description Called by GitHub, not by the frontend. Authenticated by `X-Hub-Signature-256` (HMAC-SHA256 of the raw body with GITHUB_WEBHOOK_SECRET); returns 404 when the integration is not configured. Issue keys (DEV-104) are read from PR titles, branch names and commit messages. A pull request links itself to those issues (`git.kind = pr`), a merged one moves them to the project's first done status, and one closed without merging removes its link. A commit links issues that have no pull request link. Changes are broadcast over Live Sync with `actorId: null`. Handles `ping`, `pull_request` and `push`; other events are acknowledged with 202.
+         * @description Called by GitHub, not by the frontend. Authenticated by `X-Hub-Signature-256` (HMAC-SHA256 of the raw body with GITHUB_WEBHOOK_SECRET); returns 404 when the integration is not configured. Issue keys (DEV-104) are read from PR titles, branch names and commit messages. A pull request links itself to those issues (`git.kind = pr`), a merged one moves them to the project's first done status, and one closed without merging removes its link. A commit links issues that have no pull request link. Changes are broadcast over Live Sync with `actorId: null`. Deliveries change issues only in the workspace their installation is linked to; deliveries from unlinked installations are acknowledged with 202. Handles `ping`, `pull_request`, `push` and `installation` (uninstalling unlinks); other events are acknowledged with 202.
          */
         post: {
             parameters: {
@@ -3384,6 +1546,2628 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/github/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GitHub's redirect after installing the App (called by the browser)
+         * @description Registered as the GitHub App's callback URL, with user authorization during installation. Checks the state against the devflow_github cookie, asks GitHub which installations the installing user can access, and links the installation to the workspace the install started from. Always redirects to {CORS_ORIGIN}{redirect}?github=linked, or ?github_error=<code>: github_denied, github_state_mismatch, github_not_your_installation, github_installation_taken, github_forbidden, github_failed.
+         */
+        get: {
+            parameters: {
+                query: {
+                    code: string;
+                    installation_id: string;
+                    setup_action: string;
+                    state: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Back to the frontend. */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workspace and your role in it
+         * @description 404 NOT_FOUND when you are not a member, exactly as for a workspace that does not exist.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The workspace. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Workspace"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Delete the workspace
+         * @description Admins only, signed-in session only. Deletes its projects, issues, sprints, invites and access tokens, and every membership, immediately; there is no undo. The accounts themselves are kept. 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Rename the workspace
+         * @description Admins only, signed-in session only. The slug does not change, so links keep working. 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RenameWorkspaceRequest"];
+                };
+            };
+            responses: {
+                /** @description The renamed workspace. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Workspace"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/workspaces/{workspace}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave the workspace
+         * @description Any role, signed-in session only. Your access tokens for it are deleted and your issues and project leads in it are unassigned. 409 LAST_ADMIN when you are its last admin: promote someone first, or delete the workspace if you are its only member. 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Left. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Members and pending invites
+         * @description Oldest first. Pending invites have status `invited` and lastActiveAt null. Any role.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of members. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamMemberPage"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/members/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a member or revoke an invite
+         * @description Admins only, signed-in session only. Removing a member ends their access immediately and deletes their access tokens for this workspace; their account and other workspaces are kept, and their issues and project leads here are unassigned. Errors: 403 CANNOT_REMOVE_SELF, 409 LAST_ADMIN, 404 NOT_FOUND. 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Change a member's or invite's role
+         * @description Admins only, signed-in session only. Errors: 403 CANNOT_CHANGE_OWN_ROLE, 409 LAST_ADMIN (demoting the last active admin), 404 NOT_FOUND. Last write wins: no If-Match. 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ChangeRoleRequest"];
+                };
+            };
+            responses: {
+                /** @description The updated member. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamMember"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/workspaces/{workspace}/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite someone by email
+         * @description Admins only, signed-in session only. Emails a single-use link to {CORS_ORIGIN}/invite?token=… that expires after 7 days. Errors: 409 ALREADY_MEMBER (already a member or already invited), 502 EMAIL_DELIVERY_FAILED (the invite is kept; use resend). 403 DEMO_WORKSPACE_LOCKED in the demo workspace. 403 EMAIL_UNVERIFIED when the server delivers email and yours is not verified yet.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["InviteRequest"];
+                };
+            };
+            responses: {
+                /** @description The pending invite. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamMember"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/invites/{id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-send an invite
+         * @description Admins only. Sends a new link valid for 7 days; earlier links stop working. 404 NOT_FOUND if the invite was accepted or revoked; 502 EMAIL_DELIVERY_FAILED. 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The pending invite. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamMember"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore the sample projects
+         * @description Admins only, signed-in session only. Replaces the sample projects (DEV, BIL, MOB, the ones created with the workspace) with fresh copies dated relative to now, assigned as when the workspace was created; projects you created are kept, and a sample whose key one of them uses is skipped. In the demo workspace every project is replaced, with the demo team's assignments and comments. Members are untouched. Re-fetch /bootstrap afterwards.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sample data restored. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything the app shell needs after sign-in
+         * @description The signed-in user, the workspace with your role, the feature flags and every project with its summary, in one call. Any role; tokens need issues:read.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The bootstrap payload. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Bootstrap"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Projects in the workspace, with summaries
+         * @description Oldest first, each with active-sprint progress, backlog count and lead (as on the Projects overview). Any role; tokens need issues:read.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of projects. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectPage"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a project
+         * @description Members and admins; tokens need projects:admin. The key is upper-cased, must match ^[A-Z]{2,5}$ and cannot change later. Creates the default workflow (To Do, In Progress, In Review, Done); the creator leads the project. Errors: 409 PROJECT_KEY_TAKEN, 422 VALIDATION_FAILED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateProjectRequest"];
+                };
+            };
+            responses: {
+                /** @description The new project. */
+                201: {
+                    headers: {
+                        /** @description Version of the project; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A project with its workflow */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description Project key, any case. */
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The project. */
+                200: {
+                    headers: {
+                        /** @description Version of the project; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Delete a project
+         * @description Admins only; tokens need projects:admin. Deletes its workflow, sprints, issues and comments.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description Project key, any case. */
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Rename or describe a project
+         * @description Members and admins; tokens need projects:admin. The key is immutable. Optional If-Match → 412 CONFLICT_STALE.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "If-Match"?: string;
+                };
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description Project key, any case. */
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateProjectRequest"];
+                };
+            };
+            responses: {
+                /** @description The updated project. */
+                200: {
+                    headers: {
+                        /** @description Version of the project; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything to render a project
+         * @description The project with its workflow, all its sprints by number (completed ones with their report) and every issue in the backlog or a planned/active sprint, in rank order. Completed sprints' issues are left out. Not paginated. Re-fetch after reconnecting to realtime.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description Project key, any case. */
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The project snapshot. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectSnapshot"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Issues of a project, in rank order
+         * @description Any role; tokens need issues:read. Filters combine with AND.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    /** @description A sprint id, `backlog` (no sprint) or `active` (the active sprint). */
+                    sprint?: "backlog" | "active" | string;
+                    /** @description A user id, or `none` for unassigned. */
+                    assignee?: "none" | string;
+                    priority?: "urgent" | "high" | "medium" | "low";
+                    type?: "story" | "bug" | "task";
+                    /** @description Matches the key, title or description. */
+                    q?: string;
+                    /** @description `true` = assigned to you. */
+                    mine?: "true" | "false";
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of issues. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IssuePage"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create an issue
+         * @description Members and admins; tokens need issues:write. Gets the next key (DEV-134) atomically and goes to the top of the ranking. statusId defaults to the first to-do status. sprintId must be a planned or active sprint of the project; assigneeId a workspace member.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateIssueRequest"];
+                };
+            };
+            responses: {
+                /** @description The new issue. */
+                201: {
+                    headers: {
+                        /** @description Version of the issue; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Issue"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/issues/{issueKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An issue by key
+         * @description Any role; tokens need issues:read. A bare number needs ?project=KEY (422 otherwise).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Project key; required when :issueKey is a bare number such as 104. */
+                    project?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
+                    issueKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The issue. */
+                200: {
+                    headers: {
+                        /** @description Version of the issue; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Issue"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Delete an issue
+         * @description Members and admins; tokens need issues:write. Its number is not reused.
+         */
+        delete: {
+            parameters: {
+                query?: {
+                    /** @description Project key; required when :issueKey is a bare number such as 104. */
+                    project?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
+                    issueKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Update an issue
+         * @description Members and admins; tokens need issues:write. Moving into a done-category status sets resolvedAt; moving out clears it. Optional If-Match → 412 CONFLICT_STALE. For board drops and ranking use POST /issues/{issueKey}/move.
+         */
+        patch: {
+            parameters: {
+                query?: {
+                    /** @description Project key; required when :issueKey is a bare number such as 104. */
+                    project?: string;
+                };
+                header?: {
+                    "If-Match"?: string;
+                };
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
+                    issueKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateIssueRequest"];
+                };
+            };
+            responses: {
+                /** @description The updated issue. */
+                200: {
+                    headers: {
+                        /** @description Version of the issue; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Issue"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/workspaces/{workspace}/issues/{issueKey}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an issue (board drop, backlog drag, ranking)
+         * @description Members and admins; tokens need issues:write. Changes statusId and/or sprintId and re-ranks the issue without renumbering others. Placement rules: see MoveIssueRequest.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Project key; required when :issueKey is a bare number such as 104. */
+                    project?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    /** @description DEV-104 (any case), or 104 with ?project=DEV. */
+                    issueKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["MoveIssueRequest"];
+                };
+            };
+            responses: {
+                /** @description The moved issue. */
+                200: {
+                    headers: {
+                        /** @description Version of the issue; send it back as If-Match. */
+                        ETag?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Issue"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a status (board column)
+         * @description Admins only; tokens need projects:admin. Inserted before the first done status, unless its category is done (then last).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["AddStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description The project with its updated workflow. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/statuses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a status
+         * @description Admins only. Moves its issues to ?moveTo= (required when it has issues), then deletes it. 409 STATUS_DELETE_BLOCKED keeps at least two statuses and at least one to-do and one done status.
+         */
+        delete: {
+            parameters: {
+                query?: {
+                    /** @description Status that receives the deleted status's issues. Required when it has issues. */
+                    moveTo?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The project with its updated workflow. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Rename a status or change its category
+         * @description Admins only. Changing into or out of done sets or clears resolvedAt on its issues. 409 STATUS_UPDATE_BLOCKED when it would leave the workflow without a to-do or done status.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description The project with its updated workflow. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/statuses/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder the workflow
+         * @description Admins only. 422 unless statusIds lists every status of the project exactly once.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReorderStatusesRequest"];
+                };
+            };
+            responses: {
+                /** @description The project with its updated workflow. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/issues/{issueKey}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An issue's comment thread
+         * @description Oldest first. Any role; tokens need issues:read.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    /** @description Project key; required when :issueKey is a bare number such as 104. */
+                    project?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    issueKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of comments. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CommentPage"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Comment on an issue
+         * @description Members and admins; tokens need issues:write. The body is Markdown, stored as written; sanitise it when rendering. Increments the issue's comments count.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Project key; required when :issueKey is a bare number such as 104. */
+                    project?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    issueKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateCommentRequest"];
+                };
+            };
+            responses: {
+                /** @description The new comment. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Comment"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/sprints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sprints of a project, by number
+         * @description Any role; tokens need issues:read.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Comma-separated filter, e.g. planned,active. */
+                    status?: string;
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of sprints. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SprintPage"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create the next sprint
+         * @description Members and admins; tokens need issues:write. Creates `Sprint {n+1}` in the planned state. No body.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The new sprint. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Sprint"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/sprints/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a planned sprint
+         * @description Members and admins; tokens need issues:write. Its issues return to the backlog. 409 SPRINT_NOT_PLANNED for active or completed sprints.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Rename a sprint or set its goal
+         * @description Members and admins; tokens need issues:write.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateSprintRequest"];
+                };
+            };
+            responses: {
+                /** @description The updated sprint. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Sprint"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/workspaces/{workspace}/sprints/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a planned sprint
+         * @description Members and admins; tokens need issues:write. Starts now and ends after durationDays (1 to 28); committedPoints snapshots the points in the sprint. 409 SPRINT_ALREADY_ACTIVE when another sprint of the project is running, 409 SPRINT_NOT_PLANNED when this one is not planned.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["StartSprintRequest"];
+                };
+            };
+            responses: {
+                /** @description The started sprint. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Sprint"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/sprints/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete the active sprint
+         * @description Members and admins; tokens need issues:write. In one transaction: writes the report, marks the sprint completed and moves issues not in a done status to carryOver (the backlog, a planned sprint, or a new sprint it creates). 409 SPRINT_NOT_ACTIVE when this sprint is not the active one.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CompleteSprintRequest"];
+                };
+            };
+            responses: {
+                /** @description The completed sprint and the carry-over target. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CompletedSprint"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/sprints/{id}/burndown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Burndown of a sprint
+         * @description One point per sprint day from the issue history: ideal falls from committedPoints to zero; remaining is the points still open in the sprint at that moment, null for days still ahead. A completed sprint is read just before it completed. Empty days for a sprint that has not started. Any role; tokens need issues:read.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The burndown. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Burndown"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/reports/velocity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Velocity of recent sprints
+         * @description Committed against completed points for the last `limit` completed sprints, oldest first.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description How many recent sprints. */
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The velocity series. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Velocity"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/projects/{key}/reports/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sprint history
+         * @description Completed sprints with goal, dates and report, newest first.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of completed sprints. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SprintHistory"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/integrations/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GitHub installations linked to the workspace
+         * @description Any role; access tokens need issues:read.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Whether linking is available, and the linked installations. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitHubStatus"];
+                    };
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/integrations/github/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Install the GitHub App for this workspace (browser navigation)
+         * @description Admins only, signed-in session only; navigate the browser here, not fetch. Sets a short-lived state cookie and redirects to GitHub's install page; GitHub comes back through /api/integrations/github/setup, which redirects to {CORS_ORIGIN}{redirect}. redirect is a relative frontend path (default /projects). 404 when the integration is not configured; 403 DEMO_WORKSPACE_LOCKED in the demo workspace.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    redirect?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description To GitHub. */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace}/integrations/github/installations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unlink an installation
+         * @description Admins only, signed-in session only. Its deliveries stop changing this workspace; the App stays installed on GitHub (uninstall it there to remove it). 404 when it is not linked here; 403 DEMO_WORKSPACE_LOCKED.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The workspace's slug. */
+                    workspace: string;
+                    id: number | null;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Unlinked. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description RATE_LIMITED: too many requests from this client. Retry after Retry-After seconds. */
+                429: {
+                    headers: {
+                        /** @description Seconds until the limit resets. */
+                        "Retry-After"?: number;
+                        /** @description Remaining quota (IETF draft-7 RateLimit header). */
+                        RateLimit?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Error, as RFC 9457 problem details. */
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3404,7 +4188,7 @@ export interface components {
          *       "title": "Another sprint is already active",
          *       "status": 409,
          *       "detail": "Sprint 25 is already active in DEV.",
-         *       "instance": "/api/v1/sprints/0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e6f/start",
+         *       "instance": "/api/v2/workspaces/acme-inc/sprints/0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e6f/start",
          *       "code": "SPRINT_ALREADY_ACTIVE",
          *       "requestId": "6f1c2a9e-3b7d-4c8e-9f0a-1b2c3d4e5f60"
          *     }
@@ -3421,7 +4205,7 @@ export interface components {
              * @description Stable machine-readable code; see docs/INTEGRATION.md.
              * @enum {string}
              */
-            code: "BAD_REQUEST" | "RESET_TOKEN_INVALID" | "INVITE_INVALID" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "INVALID_CREDENTIALS" | "WEBHOOK_SIGNATURE_INVALID" | "FORBIDDEN" | "CANNOT_CHANGE_OWN_ROLE" | "CANNOT_REMOVE_SELF" | "NOT_FOUND" | "EMAIL_TAKEN" | "PROJECT_KEY_TAKEN" | "SPRINT_ALREADY_ACTIVE" | "SPRINT_NOT_PLANNED" | "SPRINT_NOT_ACTIVE" | "STATUS_DELETE_BLOCKED" | "STATUS_UPDATE_BLOCKED" | "LAST_ADMIN" | "ALREADY_MEMBER" | "CONFLICT_STALE" | "PAYLOAD_TOO_LARGE" | "VALIDATION_FAILED" | "RATE_LIMITED" | "INTERNAL_ERROR" | "EMAIL_DELIVERY_FAILED";
+            code: "BAD_REQUEST" | "RESET_TOKEN_INVALID" | "INVITE_INVALID" | "VERIFY_TOKEN_INVALID" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "INVALID_CREDENTIALS" | "WEBHOOK_SIGNATURE_INVALID" | "FORBIDDEN" | "CANNOT_CHANGE_OWN_ROLE" | "CANNOT_REMOVE_SELF" | "DEMO_WORKSPACE_LOCKED" | "DEMO_ACCOUNT_LOCKED" | "INVITE_EMAIL_MISMATCH" | "EMAIL_UNVERIFIED" | "NOT_FOUND" | "EMAIL_TAKEN" | "PROJECT_KEY_TAKEN" | "SPRINT_ALREADY_ACTIVE" | "SPRINT_NOT_PLANNED" | "SPRINT_NOT_ACTIVE" | "STATUS_DELETE_BLOCKED" | "STATUS_UPDATE_BLOCKED" | "LAST_ADMIN" | "ALREADY_MEMBER" | "CONFLICT_STALE" | "PAYLOAD_TOO_LARGE" | "VALIDATION_FAILED" | "RATE_LIMITED" | "INTERNAL_ERROR" | "EMAIL_DELIVERY_FAILED";
             /** @description Matches the X-Request-Id response header. */
             requestId: string;
             /** @description Present on 422 VALIDATION_FAILED only. */
@@ -3483,23 +4267,26 @@ export interface components {
          *         "initials": "JR",
          *         "gradient": "from-violet-500 to-indigo-600",
          *         "email": "demo@devflow.local",
-         *         "role": "admin",
          *         "timezone": "America/New_York",
-         *         "bio": "Frontend platform lead. Owns the board, realtime sync and the design system."
+         *         "bio": "Frontend platform lead. Owns the board, realtime sync and the design system.",
+         *         "emailVerified": true,
+         *         "isDemo": true
          *       },
-         *       "workspace": {
-         *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
-         *         "name": "Acme Inc"
-         *       }
+         *       "workspaces": [
+         *         {
+         *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *           "slug": "acme-inc",
+         *           "name": "Acme Inc",
+         *           "role": "admin",
+         *           "isDemo": true
+         *         }
+         *       ]
          *     }
          */
         AuthMe: {
             user: components["schemas"]["UserProfile"];
-            workspace: {
-                /** Format: uuid */
-                id: string;
-                name: string;
-            };
+            /** @description Every workspace the user belongs to, with their role in each, oldest membership first. */
+            workspaces: components["schemas"]["Workspace"][];
         };
         /**
          * @example {
@@ -3509,9 +4296,10 @@ export interface components {
          *       "initials": "JR",
          *       "gradient": "from-violet-500 to-indigo-600",
          *       "email": "demo@devflow.local",
-         *       "role": "admin",
          *       "timezone": "America/New_York",
-         *       "bio": "Frontend platform lead. Owns the board, realtime sync and the design system."
+         *       "bio": "Frontend platform lead. Owns the board, realtime sync and the design system.",
+         *       "emailVerified": true,
+         *       "isDemo": true
          *     }
          */
         UserProfile: {
@@ -3523,10 +4311,35 @@ export interface components {
             gradient: string;
             /** Format: email */
             email: string;
-            /** @enum {string} */
-            role: "admin" | "member" | "viewer";
             timezone: string;
             bio: string;
+            /** @description The owner proved the address (emailed link, OAuth provider or accepted invite). Unverified accounts cannot send invites while the server delivers email. */
+            emailVerified: boolean;
+            /** @description A shared demo account (public password): profile edits, access tokens and creating workspaces are locked. */
+            isDemo: boolean;
+        };
+        /**
+         * @example {
+         *       "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *       "slug": "acme-inc",
+         *       "name": "Acme Inc",
+         *       "role": "admin",
+         *       "isDemo": true
+         *     }
+         */
+        Workspace: {
+            /** Format: uuid */
+            id: string;
+            /** @description Used in URLs: /workspaces/{slug}/…. Set at creation, unchanged by renames. */
+            slug: string;
+            name: string;
+            /**
+             * @description The signed-in user's role in this workspace.
+             * @enum {string}
+             */
+            role: "admin" | "member" | "viewer";
+            /** @description The public demo workspace: renaming, deleting, leaving, invites and member changes are locked. */
+            isDemo: boolean;
         };
         /**
          * @example {
@@ -3569,7 +4382,15 @@ export interface components {
             password: string;
         };
         /**
-         * @description Only these fields can change; email, handle and role cannot.
+         * @example {
+         *       "token": "VERIFY_TOKEN_FROM_EMAIL"
+         *     }
+         */
+        VerifyEmailRequest: {
+            token: string;
+        };
+        /**
+         * @description Only these fields can change; email and handle cannot.
          * @example {
          *       "timezone": "Asia/Manila",
          *       "bio": "Owns the board and realtime sync."
@@ -3589,6 +4410,11 @@ export interface components {
          *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e10",
          *           "name": "devflow-cli · MacBook Pro",
          *           "lastFour": "q7Rk",
+         *           "workspace": {
+         *             "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *             "slug": "acme-inc",
+         *             "name": "Acme Inc"
+         *           },
          *           "scopes": [
          *             "issues:read",
          *             "issues:write"
@@ -3611,6 +4437,11 @@ export interface components {
          *       "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e10",
          *       "name": "devflow-cli · MacBook Pro",
          *       "lastFour": "q7Rk",
+         *       "workspace": {
+         *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *         "slug": "acme-inc",
+         *         "name": "Acme Inc"
+         *       },
          *       "scopes": [
          *         "issues:read",
          *         "issues:write"
@@ -3625,6 +4456,13 @@ export interface components {
             id: string;
             name: string;
             lastFour: string;
+            /** @description The only workspace the token works in. */
+            workspace: {
+                /** Format: uuid */
+                id: string;
+                slug: string;
+                name: string;
+            };
             scopes: ("issues:read" | "issues:write" | "projects:admin" | "webhooks:manage")[];
             /** Format: date-time */
             createdAt: string;
@@ -3639,6 +4477,11 @@ export interface components {
          *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e10",
          *         "name": "devflow-cli · MacBook Pro",
          *         "lastFour": "q7Rk",
+         *         "workspace": {
+         *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *           "slug": "acme-inc",
+         *           "name": "Acme Inc"
+         *         },
          *         "scopes": [
          *           "issues:read",
          *           "issues:write"
@@ -3661,30 +4504,117 @@ export interface components {
          *       "scopes": [
          *         "issues:write"
          *       ],
-         *       "expiresInDays": 30
+         *       "expiresInDays": 30,
+         *       "workspace": "acme-inc"
          *     }
          */
         CreateAccessTokenRequest: {
             name: string;
             scopes: ("issues:read" | "issues:write" | "projects:admin" | "webhooks:manage")[];
             expiresInDays: number | null;
+            /** @description Slug of the workspace the token works in; you must be a member. */
+            workspace: string;
         };
         /**
          * @example {
-         *       "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
-         *       "name": "Acme Inc",
-         *       "role": "admin"
+         *       "items": [
+         *         {
+         *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *           "slug": "acme-inc",
+         *           "name": "Acme Inc",
+         *           "role": "admin",
+         *           "isDemo": true
+         *         }
+         *       ],
+         *       "nextCursor": null
          *     }
          */
-        Workspace: {
-            /** Format: uuid */
-            id: string;
+        WorkspacePage: {
+            items: components["schemas"]["Workspace"][];
+            /** @description Pass as ?cursor= for the next page; null on the last. */
+            nextCursor: string | null;
+        };
+        /**
+         * @example {
+         *       "name": "Globex",
+         *       "sampleData": true
+         *     }
+         */
+        CreateWorkspaceRequest: {
             name: string;
             /**
-             * @description The signed-in user's role in this workspace.
-             * @enum {string}
+             * @description Copy the sample projects (DEV, BIL, MOB) into it, so it is not empty. Default true.
+             * @default true
              */
+            sampleData: boolean;
+        };
+        /**
+         * @example {
+         *       "email": "grace@acme.dev",
+         *       "role": "member",
+         *       "workspace": {
+         *         "name": "Acme Inc",
+         *         "slug": "acme-inc"
+         *       },
+         *       "invitedBy": {
+         *         "name": "John Rey"
+         *       },
+         *       "expiresAt": "2026-11-09T09:00:00.000Z",
+         *       "accountExists": false
+         *     }
+         */
+        InvitePreview: {
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
             role: "admin" | "member" | "viewer";
+            workspace: {
+                name: string;
+                slug: string;
+            };
+            invitedBy: {
+                name: string;
+            } | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description The email already has a DevFlow account: sign in with it and join (POST /invites/{token}/join) instead of accepting. */
+            accountExists: boolean;
+        };
+        /**
+         * @example {
+         *       "name": "Grace Hopper",
+         *       "password": "YOUR_PASSWORD"
+         *     }
+         */
+        AcceptInviteRequest: {
+            name: string;
+            password: string;
+        };
+        /**
+         * @example {
+         *       "event": "pull_request",
+         *       "handled": true,
+         *       "issues": [
+         *         "DEV-104"
+         *       ]
+         *     }
+         */
+        GitHubWebhookResult: {
+            /** @description The X-GitHub-Event header. */
+            event: string;
+            /** @description False for events and actions DevFlow ignores, and for installations not linked to a workspace. */
+            handled: boolean;
+            /** @description Keys of the issues that changed. */
+            issues: string[];
+        };
+        /**
+         * @description The slug stays the same.
+         * @example {
+         *       "name": "Globex Corp"
+         *     }
+         */
+        RenameWorkspaceRequest: {
+            name: string;
         };
         /**
          * @example {
@@ -3761,44 +4691,34 @@ export interface components {
         };
         /**
          * @example {
-         *       "email": "grace@acme.dev",
-         *       "role": "member",
+         *       "me": {
+         *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e01",
+         *         "name": "John Rey",
+         *         "handle": "jrey",
+         *         "initials": "JR",
+         *         "gradient": "from-violet-500 to-indigo-600",
+         *         "email": "demo@devflow.local",
+         *         "timezone": "America/New_York",
+         *         "bio": "Frontend platform lead. Owns the board, realtime sync and the design system.",
+         *         "emailVerified": true,
+         *         "isDemo": true
+         *       },
          *       "workspace": {
-         *         "name": "Acme Inc"
+         *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
+         *         "slug": "acme-inc",
+         *         "name": "Acme Inc",
+         *         "role": "admin",
+         *         "isDemo": true
          *       },
-         *       "invitedBy": {
-         *         "name": "John Rey"
+         *       "config": {
+         *         "oauth": {
+         *           "github": true,
+         *           "google": false
+         *         },
+         *         "githubIntegration": false,
+         *         "email": false
          *       },
-         *       "expiresAt": "2026-11-09T09:00:00.000Z"
-         *     }
-         */
-        InvitePreview: {
-            /** Format: email */
-            email: string;
-            /** @enum {string} */
-            role: "admin" | "member" | "viewer";
-            workspace: {
-                name: string;
-            };
-            invitedBy: {
-                name: string;
-            } | null;
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        /**
-         * @example {
-         *       "name": "Grace Hopper",
-         *       "password": "YOUR_PASSWORD"
-         *     }
-         */
-        AcceptInviteRequest: {
-            name: string;
-            password: string;
-        };
-        /**
-         * @example {
-         *       "items": [
+         *       "projects": [
          *         {
          *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e20",
          *           "key": "DEV",
@@ -3846,14 +4766,14 @@ export interface components {
          *             "gradient": "from-violet-500 to-indigo-600"
          *           }
          *         }
-         *       ],
-         *       "nextCursor": null
+         *       ]
          *     }
          */
-        ProjectPage: {
-            items: components["schemas"]["ProjectSummary"][];
-            /** @description Pass as ?cursor= for the next page; null on the last. */
-            nextCursor: string | null;
+        Bootstrap: {
+            me: components["schemas"]["UserProfile"];
+            workspace: components["schemas"]["Workspace"];
+            config: components["schemas"]["PublicConfig"];
+            projects: components["schemas"]["ProjectSummary"][];
         };
         /**
          * @example {
@@ -3948,6 +4868,65 @@ export interface components {
             name: string;
             /** @enum {string} */
             category: "todo" | "in_progress" | "done";
+        };
+        /**
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e20",
+         *           "key": "DEV",
+         *           "name": "DevFlow Core",
+         *           "description": "The web app: board, realtime sync, auth and the public API gateway.",
+         *           "color": "from-violet-500 to-indigo-600",
+         *           "leadId": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e01",
+         *           "workflow": [
+         *             {
+         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e21",
+         *               "name": "To Do",
+         *               "category": "todo"
+         *             },
+         *             {
+         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e22",
+         *               "name": "In Progress",
+         *               "category": "in_progress"
+         *             },
+         *             {
+         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e23",
+         *               "name": "In Review",
+         *               "category": "in_progress"
+         *             },
+         *             {
+         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e24",
+         *               "name": "Done",
+         *               "category": "done"
+         *             }
+         *           ],
+         *           "nextIssueNumber": 134,
+         *           "createdAt": "2026-05-05T09:00:00.000Z",
+         *           "activeSprint": {
+         *             "name": "Sprint 25",
+         *             "endAt": "2026-11-09T09:00:00.000Z",
+         *             "donePoints": 9,
+         *             "totalPoints": 50,
+         *             "doneIssues": 3,
+         *             "totalIssues": 11
+         *           },
+         *           "backlogCount": 5,
+         *           "lead": {
+         *             "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e01",
+         *             "name": "John Rey",
+         *             "initials": "JR",
+         *             "gradient": "from-violet-500 to-indigo-600"
+         *           }
+         *         }
+         *       ],
+         *       "nextCursor": null
+         *     }
+         */
+        ProjectPage: {
+            items: components["schemas"]["ProjectSummary"][];
+            /** @description Pass as ?cursor= for the next page; null on the last. */
+            nextCursor: string | null;
         };
         /**
          * @example {
@@ -4700,103 +5679,26 @@ export interface components {
         };
         /**
          * @example {
-         *       "me": {
-         *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e01",
-         *         "name": "John Rey",
-         *         "handle": "jrey",
-         *         "initials": "JR",
-         *         "gradient": "from-violet-500 to-indigo-600",
-         *         "email": "demo@devflow.local",
-         *         "role": "admin",
-         *         "timezone": "America/New_York",
-         *         "bio": "Frontend platform lead. Owns the board, realtime sync and the design system."
-         *       },
-         *       "workspace": {
-         *         "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e00",
-         *         "name": "Acme Inc",
-         *         "role": "admin"
-         *       },
-         *       "config": {
-         *         "oauth": {
-         *           "github": true,
-         *           "google": false
-         *         },
-         *         "githubIntegration": false,
-         *         "email": false
-         *       },
-         *       "projects": [
+         *       "enabled": true,
+         *       "installations": [
          *         {
-         *           "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e20",
-         *           "key": "DEV",
-         *           "name": "DevFlow Core",
-         *           "description": "The web app: board, realtime sync, auth and the public API gateway.",
-         *           "color": "from-violet-500 to-indigo-600",
-         *           "leadId": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e01",
-         *           "workflow": [
-         *             {
-         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e21",
-         *               "name": "To Do",
-         *               "category": "todo"
-         *             },
-         *             {
-         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e22",
-         *               "name": "In Progress",
-         *               "category": "in_progress"
-         *             },
-         *             {
-         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e23",
-         *               "name": "In Review",
-         *               "category": "in_progress"
-         *             },
-         *             {
-         *               "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e24",
-         *               "name": "Done",
-         *               "category": "done"
-         *             }
-         *           ],
-         *           "nextIssueNumber": 134,
-         *           "createdAt": "2026-05-05T09:00:00.000Z",
-         *           "activeSprint": {
-         *             "name": "Sprint 25",
-         *             "endAt": "2026-11-09T09:00:00.000Z",
-         *             "donePoints": 9,
-         *             "totalPoints": 50,
-         *             "doneIssues": 3,
-         *             "totalIssues": 11
-         *           },
-         *           "backlogCount": 5,
-         *           "lead": {
-         *             "id": "0193f1c2-8a4b-7c3d-9e5f-1a2b3c4d5e01",
-         *             "name": "John Rey",
-         *             "initials": "JR",
-         *             "gradient": "from-violet-500 to-indigo-600"
-         *           }
+         *           "installationId": 51234567,
+         *           "account": "acme",
+         *           "linkedAt": "2026-11-03T09:00:00.000Z"
          *         }
          *       ]
          *     }
          */
-        Bootstrap: {
-            me: components["schemas"]["UserProfile"];
-            workspace: components["schemas"]["Workspace"];
-            config: components["schemas"]["PublicConfig"];
-            projects: components["schemas"]["ProjectSummary"][];
-        };
-        /**
-         * @example {
-         *       "event": "pull_request",
-         *       "handled": true,
-         *       "issues": [
-         *         "DEV-104"
-         *       ]
-         *     }
-         */
-        GitHubWebhookResult: {
-            /** @description The X-GitHub-Event header. */
-            event: string;
-            /** @description False for events and actions DevFlow ignores. */
-            handled: boolean;
-            /** @description Keys of the issues that changed. */
-            issues: string[];
+        GitHubStatus: {
+            /** @description The server can link installations (GET /config: githubIntegration). */
+            enabled: boolean;
+            installations: {
+                installationId: number;
+                /** @description The GitHub user or organisation it is installed on. */
+                account: string;
+                /** Format: date-time */
+                linkedAt: string;
+            }[];
         };
     };
     responses: never;

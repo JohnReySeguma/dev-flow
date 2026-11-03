@@ -6,7 +6,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { describedBy, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Section } from "@/components/ui/section";
-import { AVATAR_GRADIENTS, ROLES, SESSION_USER, TIMEZONES, type UserProfile } from "@/lib/account-data";
+import { AVATAR_GRADIENTS, ROLES, SESSION_USER, TIMEZONES, type UserProfile as FixtureProfile } from "@/lib/account-data";
 import { getProfile, updateProfile } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils";
 
 const BIO_MAX = 280;
 const NAME_MAX = 48;
+
+/** The profile as the editor shows it. API v2 profiles have no role (roles are per workspace); demo mode has one. */
+type UserProfile = Omit<FixtureProfile, "role"> & { role?: FixtureProfile["role"] };
 
 type Draft = Pick<UserProfile, "name" | "gradient" | "timezone" | "bio">;
 type DraftErrors = Partial<Record<keyof Draft, string>>;

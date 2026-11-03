@@ -10,10 +10,13 @@ import { ACCESS_TOKENS, TOKEN_SCOPES, type AccessToken, type TokenScope } from "
 import { createAccessToken, listAccessTokens, revokeAccessToken } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { errorMessage, fieldErrors } from "@/lib/api/errors";
+import { useSession } from "@/lib/api/session";
 import { useNow } from "@/lib/use-now";
 import { cn, formatDate, timeAgo } from "@/lib/utils";
+import { chooseWorkspace, DEMO_WORKSPACE_SLUG } from "@/lib/workspace-route";
 
-type NewToken = { name: string; scopes: TokenScope[]; expiresInDays: number | null };
+/** `workspace`: the slug the token works in (API v2 binds every token to one workspace). */
+type NewToken = { name: string; scopes: TokenScope[]; expiresInDays: number | null; workspace: string };
 
 /** Every page of `GET /me/tokens`, newest first. */
 async function loadAllTokens(): Promise<AccessToken[]> {
@@ -73,6 +76,10 @@ export function AccessTokens() {
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<{ id: string; message: string } | null>(null);
   const now = useNow();
+  const session = useSession();
+  // Tokens work in one workspace; default to the one used last (if still yours), as the profile is global.
+  const defaultWorkspace =
+    session.status === "signed-in" ? (chooseWorkspace(session.workspaces.map((w) => w.slug)) ?? "") : DEMO_WORKSPACE_SLUG;
 
   // Never leave a plaintext secret on screen once the page is navigated away from.
   useLayoutEffect(() => {
@@ -162,7 +169,7 @@ export function AccessTokens() {
         </div>
       )}
 
-      {creating && <CreateTokenForm onCancel={() => setCreating(false)} onCreate={create} />}
+      {creating && <CreateTokenForm defaultWorkspace={defaultWorkspace} onCancel={() => setCreating(false)} onCreate={create} />}
 
       {load.status === "loading" ? (
         <div role="status" aria-busy="true" className="flex flex-col gap-2">
@@ -259,9 +266,12 @@ export function AccessTokens() {
 }
 
 function CreateTokenForm({
+  defaultWorkspace,
   onCancel,
   onCreate,
 }: {
+  /** Slug of the workspace the token will work in. */
+  defaultWorkspace: string;
   onCancel: () => void;
   /** Rejects with the API's error, shown in the form. */
   onCreate: (input: NewToken) => Promise<void>;
@@ -285,7 +295,7 @@ function CreateTokenForm({
 
     setPending(true);
     try {
-      await onCreate({ name: name.trim(), scopes, expiresInDays: expiryDays || null });
+      await onCreate({ name: name.trim(), scopes, expiresInDays: expiryDays || null, workspace: defaultWorkspace });
     } catch (error) {
       // Scope errors arrive per item (`scopes.0`); show them once, on the group.
       const fields = Object.fromEntries(Object.entries(fieldErrors(error)).map(([field, message]) => [field.split(".")[0], message]));

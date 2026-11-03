@@ -23,8 +23,8 @@ export type FieldError = NonNullable<ProblemDetails["errors"]>[number];
 
 /** `GET /auth/me`, and the body of sign-in, sign-up and invite acceptance. */
 export type AuthMe = Schemas["AuthMe"];
+/** The account. Since API v2 it has no role: roles belong to a workspace membership. */
 export type UserProfile = Schemas["UserProfile"];
-export type Role = UserProfile["role"];
 export type SignupRequest = Schemas["SignupRequest"];
 export type LoginRequest = Schemas["LoginRequest"];
 export type UpdateProfileRequest = Schemas["UpdateProfileRequest"];
@@ -34,9 +34,16 @@ export type CreatedAccessToken = Schemas["CreatedAccessToken"];
 export type CreateAccessTokenRequest = Schemas["CreateAccessTokenRequest"];
 export type OAuthProvider = "github" | "google";
 
-/* Workspace, members and invites (API v0.3.0). */
+/* Workspaces, members and invites (API v2: many workspaces, a role in each). */
 
+/** `{ id, slug, name, role, isDemo }`: a workspace with the caller's role in it. */
 export type Workspace = Schemas["Workspace"];
+/** One entry of `/auth/me`'s `workspaces`. */
+export type WorkspaceSummary = AuthMe["workspaces"][number];
+export type Role = Workspace["role"];
+export type WorkspacePage = Schemas["WorkspacePage"];
+export type CreateWorkspaceRequest = Schemas["CreateWorkspaceRequest"];
+export type RenameWorkspaceRequest = Schemas["RenameWorkspaceRequest"];
 export type TeamMember = Schemas["TeamMember"];
 export type TeamMemberPage = Schemas["TeamMemberPage"];
 export type InviteRequest = Schemas["InviteRequest"];

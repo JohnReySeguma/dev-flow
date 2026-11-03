@@ -22,6 +22,16 @@ export function readLastWorkspace(): string | null {
   }
 }
 
+/**
+ * Which workspace a workspace-less URL should open: the last one used if it is still in the list, otherwise the
+ * first. `null` when there are none (show /welcome).
+ */
+export function chooseWorkspace(slugs: string[]): string | null {
+  const last = readLastWorkspace();
+  if (last && slugs.includes(last)) return last;
+  return slugs[0] ?? null;
+}
+
 export function rememberWorkspace(slug: string) {
   try {
     window.localStorage.setItem(LAST_KEY, slug);

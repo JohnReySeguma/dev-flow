@@ -3,12 +3,15 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { isApiMode } from "@/lib/api/config";
-import { DEMO_WORKSPACE_SLUG, readLastWorkspace, workspacePath } from "@/lib/workspace-route";
+import { useSession, type SessionState } from "@/lib/api/session";
+import { chooseWorkspace, DEMO_WORKSPACE_SLUG } from "@/lib/workspace-route";
 
-/** The slug a workspace-less URL should open. */
-function targetWorkspace(): string {
+/** The slug a workspace-less URL should open; `null` when the account has none (→ /welcome). */
+function targetWorkspace(session: SessionState): string | null {
   if (!isApiMode()) return DEMO_WORKSPACE_SLUG;
-  return readLastWorkspace() ?? DEMO_WORKSPACE_SLUG;
+  if (session.status !== "signed-in") return null;
+  // The remembered workspace only counts if /auth/me still lists it.
+  return chooseWorkspace(session.workspaces.map((w) => w.slug));
 }
 
 /**
@@ -18,10 +21,13 @@ function targetWorkspace(): string {
 export function WorkspaceRedirect() {
   const pathname = usePathname();
   const router = useRouter();
+  const session = useSession();
 
   useEffect(() => {
-    router.replace(`${workspacePath(targetWorkspace(), pathname)}${window.location.search}`);
-  }, [pathname, router]);
+    if (isApiMode() && session.status !== "signed-in") return;
+    const slug = targetWorkspace(session);
+    router.replace(slug ? `/w/${encodeURIComponent(slug)}${pathname}${window.location.search}` : "/welcome");
+  }, [pathname, router, session]);
 
   return (
     <div role="status" aria-busy="true" className="flex flex-1 items-center justify-center text-[13px] text-zinc-500">

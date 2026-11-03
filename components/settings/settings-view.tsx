@@ -12,6 +12,7 @@ import { useSession } from "@/lib/api/session";
 import type { Workspace } from "@/lib/api/types";
 import { changeRole, getWorkspace, inviteMember, listMembers, removeMember, resendInvite } from "@/lib/api/workspace";
 import { resetDemoData } from "@/lib/tracker/store";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 import { TeamMembers, type TeamActions } from "./team-members";
 
 /** Demo mode keeps today's local behaviour behind the same interface. */
@@ -34,12 +35,13 @@ const demoActions: TeamActions = {
   resend: async (member) => member,
 };
 
-const apiActions: TeamActions = {
-  invite: (email, role) => inviteMember({ email, role }),
-  changeRole: (member, role) => changeRole(member.id, role),
-  remove: (member) => removeMember(member.id),
-  resend: (member) => resendInvite(member.id),
-};
+/** Member changes in the workspace `slug` through the API. */
+const apiActions = (slug: string): TeamActions => ({
+  invite: (email, role) => inviteMember(slug, { email, role }),
+  changeRole: (member, role) => changeRole(slug, member.id, role),
+  remove: (member) => removeMember(slug, member.id),
+  resend: (member) => resendInvite(slug, member.id),
+});
 
 export function SettingsView() {
   return isApiMode() ? <ApiSettings /> : <DemoSettings />;
@@ -59,6 +61,7 @@ function DemoSettings() {
 type Loaded = { status: "loading" } | { status: "ready"; workspace: Workspace } | { status: "error"; error: unknown };
 
 function ApiSettings() {
+  const { slug } = useWorkspaceRoute();
   const session = useSession();
   const { canAdmin } = usePermissions();
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
@@ -67,7 +70,7 @@ function ApiSettings() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getWorkspace(), listMembers()])
+    Promise.all([getWorkspace(slug), listMembers(slug)])
       .then(([workspace, members]) => {
         if (!active) return;
         setTeam(members);
@@ -77,7 +80,7 @@ function ApiSettings() {
     return () => {
       active = false;
     };
-  }, [version]);
+  }, [slug, version]);
 
   const reload = () => setVersion((v) => v + 1);
   const name = loaded.status === "ready" ? loaded.workspace.name : "your";
@@ -112,7 +115,7 @@ function ApiSettings() {
           onTeamChange={setTeam}
           currentUserId={session.status === "signed-in" ? session.user.id : ""}
           canManage={canAdmin}
-          actions={apiActions}
+          actions={apiActions(slug)}
           onReload={reload}
         />
       )}
