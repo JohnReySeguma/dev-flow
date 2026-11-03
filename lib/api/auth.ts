@@ -38,6 +38,12 @@ export const requestPasswordReset = (email: string) =>
 export const resetPassword = (token: string, password: string) =>
   apiFetch<void>("/auth/password/reset", { method: "POST", body: { token, password } });
 
+/** `204` once per link; `400 VERIFY_TOKEN_INVALID` for an unknown, used, replaced or expired (48 h) one. No session needed. */
+export const verifyEmail = (token: string) => apiFetch<void>("/auth/email/verify", { method: "POST", body: { token } });
+
+/** Signed in; always `202`. Emails a fresh link (earlier ones stop working) unless the address is already verified. */
+export const resendVerification = () => apiFetch<void>("/auth/email/resend", { method: "POST" });
+
 /** Only a relative path on this site; anything else falls back to /projects (as the API does). */
 export function safeRedirect(path: string | null | undefined): string {
   return path && path.startsWith("/") && !path.startsWith("//") ? path : "/projects";
