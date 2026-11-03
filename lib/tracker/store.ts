@@ -589,6 +589,14 @@ export function useIssueSaved(id: string): boolean {
   return useSyncExternalStore(subscribe, () => !unsaved.has(id), () => true);
 }
 
+/**
+ * An issue fetched on its own (⌘K jump), e.g. one done in a completed sprint, which snapshots leave out. Adding it
+ * lets the issue sheet open it; boards and backlogs only list open sprints, so it shows nowhere else.
+ */
+export function rememberIssue(apiIssue: ApiIssue) {
+  commit((s) => (s.issues.some((i) => i.id === apiIssue.id) ? s : { ...s, issues: [...s.issues, toIssue(apiIssue)] }));
+}
+
 /** A comment was added through the API: count it on the card. */
 export function countComment(id: string) {
   commit((s) => ({ ...s, issues: s.issues.map((i) => (i.id === id ? { ...i, comments: i.comments + 1 } : i)) }));

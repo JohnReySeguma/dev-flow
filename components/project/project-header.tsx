@@ -9,7 +9,8 @@ import { usePermissions } from "@/lib/api/permissions";
 import { isApiMode } from "@/lib/api/config";
 import { useOnline } from "@/lib/realtime/live-sync";
 import { useTeam } from "@/lib/tracker/team";
-import { useTracker } from "@/lib/tracker/store";
+import { getIssue } from "@/lib/api/tracker";
+import { rememberIssue, useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
 import { useProject } from "./project-context";
 import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
@@ -22,7 +23,7 @@ const TABS: { segment: string; label: string; icon: LucideIcon }[] = [
 ];
 
 export function ProjectHeader() {
-  const { href } = useWorkspaceRoute();
+  const { href, slug } = useWorkspaceRoute();
   const { project, openIssue, openCreateIssue } = useProject();
   const { canWrite } = usePermissions();
   const team = useTeam();
@@ -51,7 +52,14 @@ export function ProjectHeader() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  function jump() {
+  function open(id: string) {
+    setNotFound(false);
+    openIssue(id);
+    setQuery("");
+    searchRef.current?.blur();
+  }
+
+  async function jump() {
     const q = query.trim().toLowerCase();
     if (!q) return;
     const own = issues.filter((i) => i.projectId === project.id);
@@ -59,12 +67,21 @@ export function ProjectHeader() {
       own.find((i) => i.id.toLowerCase() === q) ??
       own.find((i) => i.id.toLowerCase() === `${project.key.toLowerCase()}-${q}`) ??
       own.find((i) => i.title.toLowerCase().includes(q));
-    setNotFound(!match);
-    if (match) {
-      openIssue(match.id);
-      setQuery("");
-      searchRef.current?.blur();
+    if (match) return open(match.id);
+    // API mode loads open work only: a key or number may still be an issue done in a completed sprint.
+    const bareNumber = /^\d+$/.test(q);
+    if (isApiMode() && (bareNumber || q.startsWith(`${project.key.toLowerCase()}-`))) {
+      try {
+        const found = await getIssue(slug, q, bareNumber ? project.key : undefined);
+        if (found.projectId === project.id) {
+          rememberIssue(found);
+          return open(found.id);
+        }
+      } catch {
+        // NOT_FOUND (or offline): say so below.
+      }
     }
+    setNotFound(true);
   }
 
   return (
@@ -85,7 +102,7 @@ export function ProjectHeader() {
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
-              jump();
+              void jump();
             }}
             className="relative hidden md:block"
           >
