@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-11-03
+
+Step 6 of the API integration: reports from the API (`v2.0.0-beta.5`).
+
+### Changed
+
+- In API mode the reports page shows the server's burndown, velocity and sprint history. The burndown now follows the issue history, so issues added, removed, re-estimated or reopened mid-sprint are counted correctly.
+- Reports refresh once the server has caught up with a change made in the app, keeping the previous numbers on screen meanwhile; a placeholder shows while they first load and a retry if they fail.
+- Demo mode still computes the reports in the browser.
+
 ## [1.5.0] - 2026-11-03
 
 Step 5 of the API integration: projects, boards, backlogs and sprints on the server (API `v2.0.0-beta.5`).
@@ -133,6 +143,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.6.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.2.0...v1.3.0
