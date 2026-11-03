@@ -219,6 +219,14 @@ const edits = new Map<string, number>();
 
 type Remote = { resync?: boolean };
 
+/** Bumped whenever the queue drains: the server then has every change made so far. */
+let synced = 0;
+
+/** API mode: changes each time the server has caught up with the screen, e.g. to re-fetch reports. */
+export function useSyncedRevision(): number {
+  return useSyncExternalStore(subscribe, () => synced, () => 0);
+}
+
 /**
  * API mode: sends one change for the project `key` after every earlier one. Resolves with whether it succeeded; a
  * failure is reported and the project re-fetched (rolling the optimistic change back).
@@ -239,7 +247,11 @@ function remote(key: string, call: (slug: string) => Promise<unknown>, { resync 
       return false;
     } finally {
       pending--;
-      if (pending === 0) void flushResyncs(slug);
+      if (pending === 0) {
+        synced++;
+        emit();
+        void flushResyncs(slug);
+      }
     }
   });
   queue = done;
