@@ -5,6 +5,23 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-03
+
+Step 5 of the API integration: projects, boards, backlogs and sprints on the server (API `v2.0.0-beta.5`).
+
+### Added
+
+- Opening a workspace loads its projects, workflow columns, sprints, issues and members from the API, with a placeholder meanwhile and a retry if it fails. Switching workspaces loads the other one; nothing carries over.
+- Every change is saved to the server: creating, editing, dragging, re-ranking and deleting issues; adding, renaming, reordering and deleting columns; creating, renaming and deleting projects; and creating, editing, deleting, starting and completing sprints. Changes appear at once and are sent one at a time, in order.
+- A refused change shows a notice with the reason and reloads the project, so the screen matches the server again.
+- Comments in the issue panel: read every comment with its author and time; members and admins add one (Ctrl/Cmd+Enter posts).
+
+### Changed
+
+- Assignees, avatars, the team row, "My issues" and quick add use the workspace's real members in API mode.
+- In API mode, Workspace settings → Reset demo data restores the workspace's sample projects on the server, for everyone, and keeps projects people created.
+- Sprint actions were planned for Step 6 but are included here, because issues on the server can only move into sprints the server knows. Step 6 switches the reports to the API's own numbers.
+
 ## [1.4.0] - 2026-11-03
 
 Step 4 of the API integration: multiple workspaces on API v2 (`v2.0.0-beta.5`).
@@ -116,6 +133,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.5.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.1.0...v1.2.0
