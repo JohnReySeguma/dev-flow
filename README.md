@@ -126,13 +126,15 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation. Sign-up opens your new workspace; accepting an invite opens the inviting one. People who already have an account sign in from the invite and join with one click, keeping their other workspaces.
 - **Projects, boards and backlogs:** each workspace's projects, workflow columns, sprints and issues load from the API when you open it (switching workspaces loads the other one). Creating, editing, dragging, ranking and deleting issues, editing columns and projects, and planning, starting and completing sprints all save to the server. Changes show at once; if the server refuses one, the project reloads and a notice says why.
 - **Reports:** the burndown, velocity and sprint history come from the API, which counts from the issue history (re-estimated, reopened and removed issues included); they refresh after your changes reach the server.
+- **Live Sync:** teammates' changes to issues, sprints, columns and projects appear as they happen; the project header shows who has it open, and the Live Sync pill shows the connection. After a lost connection the app catches up from the server.
+- **GitHub:** admins connect the DevFlow GitHub App in Workspace settings. Pull requests and commits that mention an issue key (`DEV-104`) link to it, and merging the pull request moves the issue to done; those changes arrive live, marked "via GitHub". Testing locally needs a webhook relay to port 4000 (e.g. `npx smee-client --url <smee-url> --target http://localhost:4000/api/integrations/github/webhook`).
 - **Comments:** the issue panel lists an issue's comments; members and admins add new ones.
 - **People:** assignees, avatars and "My issues" use the workspace's real members.
 - **Sample data:** Reset demo data restores the workspace's sample projects on the server, for everyone; projects people created stay.
 - **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
 - **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-Live Sync and GitHub come in a later step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+API mode becomes the default in the final step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
@@ -150,6 +152,7 @@ All API access lives in [`lib/api/`](lib/api/):
 | `workspace.ts` | Typed calls for workspaces, members, roles and invites |
 | `tracker.ts` | Typed calls for projects, workflow, issues, sprints, comments, reports and the sample-data reset |
 | `permissions.ts` | `usePermissions()`: what your role in the current workspace allows |
+| `../realtime/live-sync.ts` | Live Sync: the Socket.IO connection, rooms, events and presence |
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
 
