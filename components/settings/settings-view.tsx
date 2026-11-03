@@ -102,7 +102,7 @@ function ApiSettings() {
       <PageHeader title="Workspace settings" description={`Manage who has access to the ${name} workspace.`} />
       {loaded.status === "ready" && (
         <WorkspaceGeneral
-          key={loaded.workspace.name}
+          key={loaded.workspace.slug}
           workspace={loaded.workspace}
           canRename={canAdmin && !locked}
           isDemoAccount={isDemoAccount}
