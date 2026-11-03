@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, KeyRound, Plus, Terminal, TriangleAlert, X } from "lucide-react";
+import { CircleAlert, KeyRound, Lock, Plus, Terminal, TriangleAlert, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -85,6 +85,8 @@ export function AccessTokens() {
   // Tokens work in one workspace; default to the one used last (if still yours), as the profile is global.
   const defaultWorkspace =
     session.status === "signed-in" ? (chooseWorkspace(session.workspaces.map((w) => w.slug)) ?? "") : DEMO_WORKSPACE_SLUG;
+  // The shared demo account can look but not generate or revoke.
+  const locked = session.status === "signed-in" && session.user.isDemo;
 
   // Never leave a plaintext secret on screen once the page is navigated away from.
   useLayoutEffect(() => {
@@ -133,7 +135,8 @@ export function AccessTokens() {
       title="Developer credentials"
       description="Personal access tokens authenticate the devflow CLI and REST API as you."
       actions={
-        !creating && (
+        !creating &&
+        !locked && (
           <Button variant="secondary" onClick={() => setCreating(true)}>
             <Plus aria-hidden className="size-3.5" />
             Generate token
@@ -142,6 +145,11 @@ export function AccessTokens() {
       }
       bodyClassName="flex flex-col gap-4"
     >
+      {locked && (
+        <p className="flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[12.5px] text-amber-200">
+          <Lock aria-hidden className="size-3.5 shrink-0" /> The shared demo account can&apos;t generate or revoke tokens. Sign up to get your own.
+        </p>
+      )}
       {revealed && (
         <div role="status" className="animate-pop-in rounded-lg border border-emerald-500/25 bg-emerald-500/[0.05] p-4">
           <div className="flex items-start gap-2">
@@ -263,9 +271,11 @@ export function AccessTokens() {
                       </Button>
                     </>
                   ) : (
-                    <Button size="sm" variant="secondary" onClick={() => setConfirmRevokeId(token.id)}>
-                      Revoke
-                    </Button>
+                    !locked && (
+                      <Button size="sm" variant="secondary" onClick={() => setConfirmRevokeId(token.id)}>
+                        Revoke
+                      </Button>
+                    )
                   )}
                 </div>
                 {revokeError?.id === token.id && (

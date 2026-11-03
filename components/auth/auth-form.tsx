@@ -48,6 +48,7 @@ const OAUTH_ERRORS: Record<string, string> = {
   oauth_state_mismatch: "That sign-in link expired or was tampered with. Please start again.",
   oauth_email_unverified:
     "Your provider account has no verified email address, so it can't be linked. Verify it there, or sign in with email.",
+  oauth_account_locked: "That email belongs to a shared demo account, which can't be linked to a provider. Sign in with its email and password, or sign up.",
   oauth_failed: "The provider couldn't be reached or refused the request. Please try again.",
 };
 
