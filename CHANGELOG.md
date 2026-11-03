@@ -5,6 +5,21 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-11-03
+
+Step 7 of the API integration: invites for people who already have an account (API `v2.0.0-beta.5`).
+
+### Added
+
+- When the invited email already has an account, `/invite` asks to sign in with it, comes back to the invite afterwards (email or OAuth) and joins with one click. The new workspace appears in the switcher and opens straight away; the account's other workspaces stay.
+- Signed in with another email, or as a shared demo account, the invite page says so and offers to sign out and switch. The invite stays valid.
+- Signed in as someone already in that workspace, it offers to open the workspace instead.
+
+### Changed
+
+- Accepting an invite as a new person whose email signed up in the meantime (`EMAIL_TAKEN`) switches to signing in and joining.
+- The invite card's "Sign in" link returns to the invite.
+
 ## [1.6.0] - 2026-11-03
 
 Step 6 of the API integration: reports from the API (`v2.0.0-beta.5`).
@@ -143,6 +158,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.7.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.3.0...v1.4.0
