@@ -15,6 +15,7 @@ import { changeRole, getWorkspace, inviteMember, listMembers, removeMember, rese
 import { resetDemoData } from "@/lib/tracker/store";
 import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 import { leaveForAnotherWorkspace } from "@/components/workspace/workspace-navigation";
+import { GitHubIntegration } from "./github-integration";
 import { TeamMembers, type TeamActions } from "./team-members";
 import { WorkspaceDangerZone } from "./workspace-danger-zone";
 import { WorkspaceGeneral } from "./workspace-general";
@@ -141,6 +142,7 @@ function ApiSettings() {
           onReload={reload}
         />
       )}
+      <GitHubIntegration slug={slug} canManage={canAdmin && !locked} isDemoWorkspace={isDemoWorkspace} />
       {/* Reset stays open in the demo workspace too. */}
       {canAdmin && <DemoData />}
       {loaded.status === "ready" && !locked && <WorkspaceDangerZone workspace={loaded.workspace} canDelete={canAdmin} />}

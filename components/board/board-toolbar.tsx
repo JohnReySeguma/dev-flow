@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Dropdown, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/dropdown";
+import { isApiMode } from "@/lib/api/config";
+import { useLiveStatus, type LiveStatus } from "@/lib/realtime/live-sync";
 import { useTeam } from "@/lib/tracker/team";
 import { PRIORITIES, type Priority } from "@/lib/tracker/types";
 import { cn } from "@/lib/utils";
@@ -266,11 +268,32 @@ export function BoardToolbar({
   );
 }
 
+const LIVE_LABEL: Record<Exclude<LiveStatus, "live">, { label: string; title: string }> = {
+  off: { label: "Offline", title: "Live Sync is off" },
+  connecting: { label: "Connecting…", title: "Connecting to Live Sync" },
+  offline: { label: "Reconnecting…", title: "Live Sync lost its connection; changes will catch up when it's back" },
+};
+
+/** Demo mode: a static pill. API mode: the real Live Sync connection. */
 function LiveSyncPill() {
+  const status = useLiveStatus();
+  if (isApiMode() && status !== "live") {
+    const { label, title } = LIVE_LABEL[status];
+    return (
+      <div
+        role="status"
+        title={title}
+        className="flex h-8 items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/[0.07] pr-3 pl-2.5 text-[12px] font-medium text-amber-300"
+      >
+        <span className="relative inline-flex size-2 rounded-full bg-amber-400" />
+        {label}
+      </div>
+    );
+  }
   return (
     <div
       role="status"
-      title="Connected to wss://sync.devflow.dev · realtime updates enabled"
+      title={isApiMode() ? "Live Sync connected · teammates' changes appear as they happen" : "Connected to wss://sync.devflow.dev · realtime updates enabled"}
       className="flex h-8 items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.07] pr-3 pl-2.5 text-[12px] font-medium text-emerald-300"
     >
       <span className="relative flex size-2">

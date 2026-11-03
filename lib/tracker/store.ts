@@ -102,6 +102,8 @@ let loadState: TrackerLoad = IDLE;
 let workspace: string | null = null;
 let members: Member[] = [];
 let meId: string | null = null;
+/** The current workspace's `Workspace.id`, which Live Sync events carry. */
+let workspaceId: string | null = null;
 /** Bumped by every load, so a slow load for a workspace you already left is dropped. */
 let generation = 0;
 
@@ -135,7 +137,7 @@ function fromSnapshots(snapshots: ProjectSnapshot[]): TrackerState {
 async function fetchWorkspace(slug: string) {
   const [boot, team] = await Promise.all([api.getBootstrap(slug), listMembers(slug)]);
   const snapshots = await Promise.all(boot.projects.map((p) => api.getProjectSnapshot(slug, p.key)));
-  return { me: boot.me.id, data: fromSnapshots(snapshots), team: team.filter((m) => m.status === "active").map(toMember) };
+  return { me: boot.me.id, workspaceId: boot.workspace.id, data: fromSnapshots(snapshots), team: team.filter((m) => m.status === "active").map(toMember) };
 }
 
 /**
@@ -148,6 +150,7 @@ export async function loadWorkspace(slug: string, { force = false } = {}): Promi
   const run = ++generation;
   if (workspace !== slug) {
     workspace = slug;
+    workspaceId = null;
     state = EMPTY;
     members = [];
     ids.clear();
@@ -160,6 +163,7 @@ export async function loadWorkspace(slug: string, { force = false } = {}): Promi
     state = loaded.data;
     members = loaded.team;
     meId = loaded.me;
+    workspaceId = loaded.workspaceId;
     loadState = { status: "ready", slug };
   } catch (error) {
     if (run !== generation) return;
@@ -292,6 +296,116 @@ function applySnapshot(key: string, snapshot: ProjectSnapshot) {
       issues: [...s.issues.filter((i) => i.projectId !== local.id), ...snapshot.issues.map(toIssue)],
     };
   });
+}
+
+/* ------------------------------------------- API: teammates' live changes */
+
+/** The current workspace's id and project keys, for Live Sync's rooms (API mode). */
+export function getLiveTarget(): { slug: string; workspaceId: string; projectKeys: string[] } | null {
+  if (!API || !workspace || !workspaceId || loadState.status !== "ready") return null;
+  return { slug: workspace, workspaceId, projectKeys: getSnapshot().projects.map((p) => p.key) };
+}
+
+/** Who you are in the current workspace, so your own events (already applied) can be skipped. */
+export const getCurrentUserId = () => meId;
+
+/** Re-fetches projects once no request of ours is in flight, e.g. after Live Sync reconnects (events are not replayed). */
+export function refetchProjects(keys: string[]) {
+  const slug = workspace;
+  if (!API || !slug) return;
+  keys.forEach((key) => resyncs.add(key));
+  if (pending === 0) void flushResyncs(slug);
+}
+
+/** One Live Sync event (INTEGRATION §7.3), by name, with its payload. */
+export type LiveEvent =
+  | { type: "issue.created" | "issue.updated"; issue: ApiIssue }
+  | { type: "issue.moved"; issue: ApiIssue; beforeIssueKey: string | null }
+  | { type: "issue.deleted"; issueKey: string }
+  | { type: "sprint.created" | "sprint.updated" | "sprint.started"; sprint: ApiSprint }
+  | { type: "sprint.completed"; sprint: ApiSprint; carriedOverTo: ApiSprint | null; issues: ApiIssue[] }
+  | { type: "sprint.deleted"; sprintId: string; issues: ApiIssue[] }
+  | { type: "workflow.updated" | "project.updated"; project: ApiProject }
+  | { type: "project.deleted" };
+
+/** Replaces issues by key, or adds the ones the store doesn't have. */
+function upsertIssues(issues: Issue[], incoming: ApiIssue[]): Issue[] {
+  const byId = new Map(incoming.map((i) => [i.id, toIssue(i)]));
+  const next = issues.map((i) => byId.get(i.id) ?? i);
+  const known = new Set(issues.map((i) => i.id));
+  return [...next, ...incoming.filter((i) => !known.has(i.id)).map(toIssue)];
+}
+
+function upsertSprint(sprints: Sprint[], incoming: ApiSprint): Sprint[] {
+  const sprint = toSprint(incoming);
+  return sprints.some((sp) => sp.id === sprint.id) ? sprints.map((sp) => (sp.id === sprint.id ? sprint : sp)) : [...sprints, sprint];
+}
+
+/**
+ * Applies a teammate's (or GitHub's) change from Live Sync. Events for another workspace or for a project the store
+ * doesn't have are dropped; anything the store can't place (an issue or sprint it doesn't know) re-fetches the
+ * project, since the snapshot is authoritative (§7.4).
+ */
+export function applyLiveEvent(eventWorkspaceId: string, projectKey: string, event: LiveEvent) {
+  if (!API || eventWorkspaceId !== workspaceId) return;
+  const project = getSnapshot().projects.find((p) => p.key === projectKey);
+  if (!project) return;
+  const hasIssue = (key: string) => getSnapshot().issues.some((i) => i.id === key);
+  const hasSprint = (id: string) => getSnapshot().sprints.some((sp) => sp.id === id);
+
+  switch (event.type) {
+    case "issue.created":
+      commit((s) =>
+        hasIssue(event.issue.id) ? { ...s, issues: upsertIssues(s.issues, [event.issue]) } : { ...s, issues: [toIssue(event.issue), ...s.issues] },
+      );
+      // The project's key counter moved on: our next optimistic key must not reuse this one.
+      commit((s) =>
+        mapProject(s, project.id, (p) => ({ ...p, nextIssueNumber: Math.max(p.nextIssueNumber, Number(event.issue.id.split("-")[1]) + 1) })),
+      );
+      return;
+    case "issue.updated":
+      if (!hasIssue(event.issue.id)) return refetchProjects([projectKey]);
+      commit((s) => ({ ...s, issues: upsertIssues(s.issues, [event.issue]) }));
+      return;
+    case "issue.moved":
+      if (!hasIssue(event.issue.id)) return refetchProjects([projectKey]);
+      commit((s) => ({ ...s, issues: reorder(s.issues, toIssue(event.issue), event.beforeIssueKey ?? undefined) }));
+      return;
+    case "issue.deleted":
+      commit((s) => ({ ...s, issues: s.issues.filter((i) => i.id !== event.issueKey) }));
+      return;
+    case "sprint.created":
+    case "sprint.started":
+    case "sprint.updated":
+      commit((s) => ({ ...s, sprints: upsertSprint(s.sprints, event.sprint) }));
+      return;
+    case "sprint.completed":
+      commit((s) => {
+        let sprints = upsertSprint(s.sprints, event.sprint);
+        if (event.carriedOverTo) sprints = upsertSprint(sprints, event.carriedOverTo);
+        return { ...s, sprints, issues: upsertIssues(s.issues, event.issues) };
+      });
+      return;
+    case "sprint.deleted":
+      if (!hasSprint(event.sprintId)) return refetchProjects([projectKey]);
+      commit((s) => ({ ...s, sprints: s.sprints.filter((sp) => sp.id !== event.sprintId), issues: upsertIssues(s.issues, event.issues) }));
+      return;
+    case "workflow.updated":
+      commit((s) => mapProject(s, project.id, () => toProject(event.project)));
+      refetchProjects([projectKey]); // a deleted status moved its issues
+      return;
+    case "project.updated":
+      commit((s) => mapProject(s, project.id, () => toProject(event.project)));
+      return;
+    case "project.deleted":
+      commit((s) => ({
+        ...s,
+        projects: s.projects.filter((p) => p.id !== project.id),
+        sprints: s.sprints.filter((sp) => sp.projectId !== project.id),
+        issues: s.issues.filter((i) => i.projectId !== project.id),
+      }));
+      return;
+  }
 }
 
 /* ---------------------------------------------------------------- helpers */

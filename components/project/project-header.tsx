@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { usePermissions } from "@/lib/api/permissions";
+import { isApiMode } from "@/lib/api/config";
+import { useOnline } from "@/lib/realtime/live-sync";
 import { useTeam } from "@/lib/tracker/team";
 import { useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,11 @@ export function ProjectHeader() {
   const { project, openIssue, openCreateIssue } = useProject();
   const { canWrite } = usePermissions();
   const team = useTeam();
+  // API mode: who has this project open right now (Live Sync presence); demo mode: the sample team.
+  const online = useOnline(project.key);
+  const shown = isApiMode()
+    ? online.flatMap((id) => (team.byId[id] ? [{ ...team.byId[id], presence: "online" as const }] : []))
+    : team.members;
   const { issues } = useTracker();
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -106,10 +113,11 @@ export function ProjectHeader() {
             </kbd>
           </form>
 
-          <div role="group" aria-label="Team" className="hidden gap-1.5 xl:flex">
-            {team.members.slice(0, 4).map((m) => (
-              <Avatar key={m.id} member={m} size="sm" showPresence={team.showsPresence} />
+          <div role="group" aria-label={isApiMode() ? "Online now" : "Team"} className="hidden gap-1.5 xl:flex">
+            {shown.slice(0, 4).map((m) => (
+              <Avatar key={m.id} member={m} size="sm" showPresence={isApiMode() || team.showsPresence} />
             ))}
+            {shown.length > 4 && <span className="self-center text-[11px] text-zinc-500">+{shown.length - 4}</span>}
           </div>
 
           {canWrite && (
