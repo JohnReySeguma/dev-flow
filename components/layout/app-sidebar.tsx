@@ -6,6 +6,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/ui/logo";
+import { WorkspaceBox, WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { SESSION_USER } from "@/lib/account-data";
 import { isApiMode } from "@/lib/api/config";
 import { signOut, useSession } from "@/lib/api/session";
@@ -122,14 +123,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
 
-      <div className="mx-3 flex items-center gap-2.5 rounded-lg border border-line bg-elevated px-2.5 py-2">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-raised text-[10px] font-semibold text-zinc-300 ring-1 ring-line-strong">
-          A
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[11px] leading-tight text-zinc-500">Workspace</span>
-          <span className="block truncate text-[13px] leading-tight font-medium text-zinc-100">Acme Inc</span>
-        </span>
+      <div className="mx-3">
+        {/* The switcher reads the slug from the URL, which suspends on runtime workspace routes. */}
+        <Suspense fallback={<WorkspaceBox />}>
+          <WorkspaceSwitcher onNavigate={onNavigate} />
+        </Suspense>
       </div>
 
       {/* Reading the pathname suspends on routes with runtime params (new projects). */}
