@@ -1,19 +1,23 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/ui/section";
 import { SESSION_USER, TEAM, type TeamMember } from "@/lib/account-data";
 import { isApiMode } from "@/lib/api/config";
-import { errorMessage } from "@/lib/api/errors";
+import { ApiError, errorMessage } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/api/permissions";
 import { useSession } from "@/lib/api/session";
 import type { Workspace } from "@/lib/api/types";
 import { changeRole, getWorkspace, inviteMember, listMembers, removeMember, resendInvite } from "@/lib/api/workspace";
 import { resetDemoData } from "@/lib/tracker/store";
 import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
+import { leaveForAnotherWorkspace } from "@/components/workspace/workspace-navigation";
 import { TeamMembers, type TeamActions } from "./team-members";
+import { WorkspaceDangerZone } from "./workspace-danger-zone";
+import { WorkspaceGeneral } from "./workspace-general";
 
 /** Demo mode keeps today's local behaviour behind the same interface. */
 const demoActions: TeamActions = {
@@ -62,8 +66,9 @@ type Loaded = { status: "loading" } | { status: "ready"; workspace: Workspace } 
 
 function ApiSettings() {
   const { slug } = useWorkspaceRoute();
+  const router = useRouter();
   const session = useSession();
-  const { canAdmin } = usePermissions();
+  const { canAdmin, isDemoWorkspace, isDemoAccount } = usePermissions();
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [version, setVersion] = useState(0);
@@ -76,18 +81,34 @@ function ApiSettings() {
         setTeam(members);
         setLoaded({ status: "ready", workspace });
       })
-      .catch((error: unknown) => active && setLoaded({ status: "error", error }));
+      .catch((error: unknown) => {
+        if (!active) return;
+        // 404 on the workspace itself: it was deleted or you were removed. Refresh and move on.
+        if (error instanceof ApiError && error.code === "NOT_FOUND") void leaveForAnotherWorkspace(router, slug, { force: true });
+        else setLoaded({ status: "error", error });
+      });
     return () => {
       active = false;
     };
-  }, [slug, version]);
+  }, [slug, version, router]);
 
   const reload = () => setVersion((v) => v + 1);
   const name = loaded.status === "ready" ? loaded.workspace.name : "your";
+  // The shared demo workspace locks rename, delete, leave, invites and member changes.
+  const locked = isDemoWorkspace;
 
   return (
     <>
       <PageHeader title="Workspace settings" description={`Manage who has access to the ${name} workspace.`} />
+      {loaded.status === "ready" && (
+        <WorkspaceGeneral
+          key={loaded.workspace.name}
+          workspace={loaded.workspace}
+          canRename={canAdmin && !locked}
+          isDemoAccount={isDemoAccount}
+          onRenamed={(workspace) => setLoaded({ status: "ready", workspace })}
+        />
+      )}
       {loaded.status === "loading" ? (
         <div role="status" aria-busy="true" className="h-80 animate-pulse rounded-xl border border-line bg-surface">
           <span className="sr-only">Loading team members…</span>
@@ -114,12 +135,15 @@ function ApiSettings() {
           team={team}
           onTeamChange={setTeam}
           currentUserId={session.status === "signed-in" ? session.user.id : ""}
-          canManage={canAdmin}
+          canManage={canAdmin && !locked}
+          lockedReason={locked ? "Members and invites are locked in the shared demo workspace." : undefined}
           actions={apiActions(slug)}
           onReload={reload}
         />
       )}
+      {/* Reset stays open in the demo workspace too. */}
       {canAdmin && <DemoData />}
+      {loaded.status === "ready" && !locked && <WorkspaceDangerZone workspace={loaded.workspace} canDelete={canAdmin} />}
     </>
   );
 }
