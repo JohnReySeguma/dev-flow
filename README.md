@@ -20,7 +20,7 @@
 - **Reports** — live burndown for the active sprint, velocity (committed vs. completed) and a sprint history table, drawn as accessible SVG charts with hover tooltips.
 - **Issue detail sheet** — edit status, sprint, assignee, priority, type and story points in place.
 - **Workspaces** — a switcher between workspaces, projects overview, profile settings, personal access tokens, team roles and invites.
-- **Public site** — landing page with a live board preview, legal pages, status page, custom 404 and a working contact form.
+- **Public site** — landing page with a live board preview, the GitHub integration, team features and the tech stack, legal pages, status page, custom 404 and a working contact form.
 
 ## The process it models
 
@@ -197,6 +197,7 @@ This repository follows a lightweight, release-oriented Git workflow:
 | `v1.8.0` | Email verification |
 | `v1.9.0` | Live Sync and GitHub |
 | `v2.0.0` | Final contract review: API v2.0.0, API mode by default |
+| `v2.1.0` | Landing page showcase: GitHub, teams, tech stack |
 
 ## License
 
