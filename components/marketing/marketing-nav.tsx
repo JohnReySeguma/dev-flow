@@ -5,6 +5,8 @@ import { Logo } from "@/components/ui/logo";
 const LINKS = [
   { href: "/#features", label: "Features" },
   { href: "/#workflow", label: "How it works" },
+  { href: "/#github", label: "GitHub" },
+  { href: "/#stack", label: "Stack" },
 ];
 
 export function MarketingNav() {
