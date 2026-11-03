@@ -9,11 +9,10 @@ const COLUMNS = [
   {
     title: "Product",
     links: [
+      { label: "GitHub integration", href: "/#github" },
       { label: "Features", href: "/#features" },
       { label: "How it works", href: "/#workflow" },
-      { label: "GitHub integration", href: "/#github" },
       { label: "For teams", href: "/#teams" },
-      { label: "Tech stack", href: "/#stack" },
       { label: "Live demo", href: "/projects" },
       { label: "System status", href: "/status" },
     ],

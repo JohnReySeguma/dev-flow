@@ -3,10 +3,9 @@ import { buttonStyles } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 
 const LINKS = [
+  { href: "/#github", label: "GitHub" },
   { href: "/#features", label: "Features" },
   { href: "/#workflow", label: "How it works" },
-  { href: "/#github", label: "GitHub" },
-  { href: "/#stack", label: "Stack" },
 ];
 
 export function MarketingNav() {
