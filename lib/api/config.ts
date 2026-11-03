@@ -6,7 +6,7 @@
  * Unset or empty means demo mode: local data, and no request ever reaches the API.
  */
 
-/** API base URL without a trailing slash, e.g. `http://localhost:4000/api/v1`; null in demo mode. */
+/** API base URL without a trailing slash, e.g. `http://localhost:4000/api/v2`; null in demo mode. */
 export const API_URL: string | null = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") || null;
 
 export function isApiMode(): boolean {
