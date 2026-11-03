@@ -75,6 +75,12 @@ const invitePath = (token: string) => `/invites/${encodeURIComponent(token)}`;
 /** `INVITE_INVALID` for a link that is unknown, used, replaced or older than 7 days. */
 export const getInvite = (token: string) => apiFetch<InvitePreview>(invitePath(token));
 
+/**
+ * An existing account joins the inviting workspace (signed-in session, no body) and gets it back with its role.
+ * `INVITE_EMAIL_MISMATCH` when signed in with another email, `ALREADY_MEMBER`, `DEMO_ACCOUNT_LOCKED`.
+ */
+export const joinInvite = (token: string) => apiFetch<Workspace>(`${invitePath(token)}/join`, { method: "POST" });
+
 /** `201`: a new account in that workspace, signed in. `EMAIL_TAKEN` if the email already has an account. */
 export const acceptInvite = (token: string, body: AcceptInviteRequest) =>
   apiFetch<AuthMe>(`${invitePath(token)}/accept`, { method: "POST", body });
