@@ -2,23 +2,20 @@
 
 import { FolderKanban, LogOut, Menu, Settings, UserRound, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/ui/logo";
+import { WorkspaceBox, WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { SESSION_USER } from "@/lib/account-data";
 import { isApiMode } from "@/lib/api/config";
 import { signOut, useSession } from "@/lib/api/session";
 import type { Member } from "@/lib/members";
 import { useTracker } from "@/lib/tracker/store";
 import { cn } from "@/lib/utils";
+import { workspacePath } from "@/lib/workspace-route";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean };
-
-const ACCOUNT_ITEMS: NavItem[] = [
-  { href: "/profile", label: "Profile", icon: UserRound },
-  { href: "/settings", label: "Workspace settings", icon: Settings },
-];
 
 /**
  * Navigation for signed-in routes: a fixed rail on large screens and a
@@ -126,18 +123,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
 
-      <div className="mx-3 flex items-center gap-2.5 rounded-lg border border-line bg-elevated px-2.5 py-2">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-raised text-[10px] font-semibold text-zinc-300 ring-1 ring-line-strong">
-          A
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[11px] leading-tight text-zinc-500">Workspace</span>
-          <span className="block truncate text-[13px] leading-tight font-medium text-zinc-100">Acme Inc</span>
-        </span>
+      <div className="mx-3">
+        {/* The switcher reads the slug from the URL, which suspends on runtime workspace routes. */}
+        <Suspense fallback={<WorkspaceBox />}>
+          <WorkspaceSwitcher onNavigate={onNavigate} />
+        </Suspense>
       </div>
 
       {/* Reading the pathname suspends on routes with runtime params (new projects). */}
-      <Suspense fallback={<SidebarNav pathname={null} onNavigate={onNavigate} />}>
+      <Suspense fallback={<SidebarNav pathname={null} slug={null} onNavigate={onNavigate} />}>
         <ActiveSidebarNav onNavigate={onNavigate} />
       </Suspense>
 
@@ -163,11 +157,22 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function ActiveSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
-  return <SidebarNav pathname={usePathname()} onNavigate={onNavigate} />;
+  const params = useParams<{ slug?: string }>();
+  return <SidebarNav pathname={usePathname()} slug={params.slug ?? null} onNavigate={onNavigate} />;
 }
 
-function SidebarNav({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
+/**
+ * `slug` is the workspace in the URL; outside one (e.g. /profile) links go to the workspace-less redirect pages,
+ * which open the last workspace used.
+ */
+function SidebarNav({ pathname, slug, onNavigate }: { pathname: string | null; slug: string | null; onNavigate?: () => void }) {
   const { projects } = useTracker();
+  const inWorkspace = (path: string) => (slug ? workspacePath(slug, path) : path);
+  const projectsHref = inWorkspace("/projects");
+  const accountItems: NavItem[] = [
+    { href: "/profile", label: "Profile", icon: UserRound },
+    { href: inWorkspace("/settings"), label: "Workspace settings", icon: Settings },
+  ];
   const isActive = (href: string, exact = false) =>
     pathname !== null && (exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`));
 
@@ -181,9 +186,9 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string | null; onNavig
   return (
     <nav aria-label="Main" className="scroll-thin mt-5 flex-1 overflow-y-auto px-3">
       <div className="mb-5">
-        <Link href="/projects" onClick={onNavigate} aria-current={isActive("/projects", true) ? "page" : undefined} className={linkClass(isActive("/projects", true))}>
-          {isActive("/projects", true) && marker}
-          <FolderKanban aria-hidden className={cn("size-4", isActive("/projects", true) ? "text-brand-hover" : "text-zinc-500 group-hover:text-zinc-300")} />
+        <Link href={projectsHref} onClick={onNavigate} aria-current={isActive(projectsHref, true) ? "page" : undefined} className={linkClass(isActive(projectsHref, true))}>
+          {isActive(projectsHref, true) && marker}
+          <FolderKanban aria-hidden className={cn("size-4", isActive(projectsHref, true) ? "text-brand-hover" : "text-zinc-500 group-hover:text-zinc-300")} />
           All projects
         </Link>
       </div>
@@ -191,7 +196,7 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string | null; onNavig
       <p className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-zinc-600 uppercase">Your projects</p>
       <ul className="mb-5 flex flex-col gap-0.5">
         {projects.map((project) => {
-          const base = `/projects/${project.key}`;
+          const base = inWorkspace(`/projects/${project.key}`);
           const active = isActive(base);
           return (
             <li key={project.id}>
@@ -210,7 +215,7 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string | null; onNavig
 
       <p className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-zinc-600 uppercase">Account</p>
       <ul className="flex flex-col gap-0.5">
-        {ACCOUNT_ITEMS.map(({ href, label, icon: Icon }) => {
+        {accountItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
             <li key={href}>

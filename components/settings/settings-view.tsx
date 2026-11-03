@@ -1,18 +1,23 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/ui/section";
 import { SESSION_USER, TEAM, type TeamMember } from "@/lib/account-data";
 import { isApiMode } from "@/lib/api/config";
-import { errorMessage } from "@/lib/api/errors";
+import { ApiError, errorMessage } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/api/permissions";
 import { useSession } from "@/lib/api/session";
 import type { Workspace } from "@/lib/api/types";
 import { changeRole, getWorkspace, inviteMember, listMembers, removeMember, resendInvite } from "@/lib/api/workspace";
 import { resetDemoData } from "@/lib/tracker/store";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
+import { leaveForAnotherWorkspace } from "@/components/workspace/workspace-navigation";
 import { TeamMembers, type TeamActions } from "./team-members";
+import { WorkspaceDangerZone } from "./workspace-danger-zone";
+import { WorkspaceGeneral } from "./workspace-general";
 
 /** Demo mode keeps today's local behaviour behind the same interface. */
 const demoActions: TeamActions = {
@@ -34,12 +39,13 @@ const demoActions: TeamActions = {
   resend: async (member) => member,
 };
 
-const apiActions: TeamActions = {
-  invite: (email, role) => inviteMember({ email, role }),
-  changeRole: (member, role) => changeRole(member.id, role),
-  remove: (member) => removeMember(member.id),
-  resend: (member) => resendInvite(member.id),
-};
+/** Member changes in the workspace `slug` through the API. */
+const apiActions = (slug: string): TeamActions => ({
+  invite: (email, role) => inviteMember(slug, { email, role }),
+  changeRole: (member, role) => changeRole(slug, member.id, role),
+  remove: (member) => removeMember(slug, member.id),
+  resend: (member) => resendInvite(slug, member.id),
+});
 
 export function SettingsView() {
   return isApiMode() ? <ApiSettings /> : <DemoSettings />;
@@ -59,32 +65,50 @@ function DemoSettings() {
 type Loaded = { status: "loading" } | { status: "ready"; workspace: Workspace } | { status: "error"; error: unknown };
 
 function ApiSettings() {
+  const { slug } = useWorkspaceRoute();
+  const router = useRouter();
   const session = useSession();
-  const { canAdmin } = usePermissions();
+  const { canAdmin, isDemoWorkspace, isDemoAccount } = usePermissions();
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getWorkspace(), listMembers()])
+    Promise.all([getWorkspace(slug), listMembers(slug)])
       .then(([workspace, members]) => {
         if (!active) return;
         setTeam(members);
         setLoaded({ status: "ready", workspace });
       })
-      .catch((error: unknown) => active && setLoaded({ status: "error", error }));
+      .catch((error: unknown) => {
+        if (!active) return;
+        // 404 on the workspace itself: it was deleted or you were removed. Refresh and move on.
+        if (error instanceof ApiError && error.code === "NOT_FOUND") void leaveForAnotherWorkspace(router, slug, { force: true });
+        else setLoaded({ status: "error", error });
+      });
     return () => {
       active = false;
     };
-  }, [version]);
+  }, [slug, version, router]);
 
   const reload = () => setVersion((v) => v + 1);
   const name = loaded.status === "ready" ? loaded.workspace.name : "your";
+  // The shared demo workspace locks rename, delete, leave, invites and member changes.
+  const locked = isDemoWorkspace;
 
   return (
     <>
       <PageHeader title="Workspace settings" description={`Manage who has access to the ${name} workspace.`} />
+      {loaded.status === "ready" && (
+        <WorkspaceGeneral
+          key={loaded.workspace.slug}
+          workspace={loaded.workspace}
+          canRename={canAdmin && !locked}
+          isDemoAccount={isDemoAccount}
+          onRenamed={(workspace) => setLoaded({ status: "ready", workspace })}
+        />
+      )}
       {loaded.status === "loading" ? (
         <div role="status" aria-busy="true" className="h-80 animate-pulse rounded-xl border border-line bg-surface">
           <span className="sr-only">Loading team members…</span>
@@ -111,12 +135,15 @@ function ApiSettings() {
           team={team}
           onTeamChange={setTeam}
           currentUserId={session.status === "signed-in" ? session.user.id : ""}
-          canManage={canAdmin}
-          actions={apiActions}
+          canManage={canAdmin && !locked}
+          lockedReason={locked ? "Members and invites are locked in the shared demo workspace." : undefined}
+          actions={apiActions(slug)}
           onReload={reload}
         />
       )}
+      {/* Reset stays open in the demo workspace too. */}
       {canAdmin && <DemoData />}
+      {loaded.status === "ready" && !locked && <WorkspaceDangerZone workspace={loaded.workspace} canDelete={canAdmin} />}
     </>
   );
 }

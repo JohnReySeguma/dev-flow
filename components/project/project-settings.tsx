@@ -21,6 +21,7 @@ import {
 import { STATUS_CATEGORIES, type StatusCategory, type WorkflowStatus } from "@/lib/tracker/types";
 import { cn } from "@/lib/utils";
 import { useProject } from "./project-context";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 export function ProjectSettings() {
   // Members may rename projects; only admins edit the workflow or delete the project.
@@ -242,6 +243,7 @@ function WorkflowRow({
 }
 
 function DangerZone() {
+  const { href } = useWorkspaceRoute();
   const { project } = useProject();
   const router = useRouter();
   const [typed, setTyped] = useState("");
@@ -257,7 +259,7 @@ function DangerZone() {
           className="h-9"
           disabled={typed.trim().toUpperCase() !== project.key}
           onClick={() => {
-            router.push("/projects");
+            router.push(href("/projects"));
             deleteProject(project.id);
           }}
         >

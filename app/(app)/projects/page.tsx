@@ -1,13 +1,6 @@
-import type { Metadata } from "next";
-import { PageContainer } from "@/components/layout/page-container";
-import { ProjectsOverview } from "@/components/projects/projects-overview";
+import { WorkspaceRedirect } from "@/components/workspace/workspace-redirect";
 
-export const metadata: Metadata = { title: "Projects" };
-
-export default function ProjectsPage() {
-  return (
-    <PageContainer>
-      <ProjectsOverview />
-    </PageContainer>
-  );
+/** /projects (the OAuth landing page, old links): open the projects of the right workspace. */
+export default function ProjectsRedirectPage() {
+  return <WorkspaceRedirect />;
 }

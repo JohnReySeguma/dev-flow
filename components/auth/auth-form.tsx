@@ -11,8 +11,10 @@ import { oauthUrl, requestPasswordReset, safeRedirect } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
 import { signIn, signUp } from "@/lib/api/session";
+import type { AuthMe } from "@/lib/api/types";
 import { usePublicConfig } from "@/lib/api/use-public-config";
 import { cn } from "@/lib/utils";
+import { workspacePath } from "@/lib/workspace-route";
 
 export type AuthMode = "login" | "signup";
 
@@ -42,12 +44,20 @@ function nextPath() {
   return safeRedirect(new URLSearchParams(window.location.search).get("next"));
 }
 
+/** After sign-up: `?next=` when one was given, otherwise the new account's own workspace. */
+function landingAfterSignup(me: AuthMe) {
+  if (new URLSearchParams(window.location.search).has("next")) return nextPath();
+  const own = me.workspaces[0];
+  return own ? workspacePath(own.slug) : "/welcome";
+}
+
 /** Why the API sent the browser back to `/login?error=…` after OAuth (INTEGRATION §5.5). */
 const OAUTH_ERRORS: Record<string, string> = {
   oauth_denied: "Sign-in was cancelled on the provider's page.",
   oauth_state_mismatch: "That sign-in link expired or was tampered with. Please start again.",
   oauth_email_unverified:
     "Your provider account has no verified email address, so it can't be linked. Verify it there, or sign in with email.",
+  oauth_account_locked: "That email belongs to a shared demo account, which can't be linked to a provider. Sign in with its email and password, or sign up.",
   oauth_failed: "The provider couldn't be reached or refused the request. Please try again.",
 };
 
@@ -160,9 +170,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setPending("email");
     setFormError(null);
     try {
-      if (mode === "login") await signIn({ email: values.email.trim(), password: values.password });
-      else await signUp({ name: values.name.trim(), email: values.email.trim(), password: values.password });
-      router.push(nextPath());
+      if (mode === "login") {
+        await signIn({ email: values.email.trim(), password: values.password });
+        router.push(nextPath());
+      } else {
+        const me = await signUp({ name: values.name.trim(), email: values.email.trim(), password: values.password });
+        router.push(landingAfterSignup(me));
+      }
     } catch (error) {
       setPending(null);
       const fields = formFieldErrors(error);

@@ -11,6 +11,7 @@ import type { Issue, Project, Sprint } from "@/lib/tracker/types";
 import { useNow } from "@/lib/use-now";
 import { formatDate } from "@/lib/utils";
 import { BurndownChart, LegendItem, SERIES_1, SERIES_2, VelocityChart, type BurndownDay } from "./charts";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 const DAY = 86_400_000;
 
@@ -35,6 +36,7 @@ function burndown(project: Project, sprint: Sprint, issues: Issue[], now: number
 }
 
 export function ReportsView() {
+  const { href } = useWorkspaceRoute();
   const { project } = useProject();
   const state = useTracker();
   const now = useNow();
@@ -57,7 +59,7 @@ export function ReportsView() {
         <p className="max-w-sm text-[13px] text-zinc-500">
           Reports fill in once a sprint starts: burndown while it runs, velocity after it completes.
         </p>
-        <Link href={`/projects/${project.key}/backlog`} className={buttonStyles({ variant: "primary", className: "mt-2" })}>
+        <Link href={href(`/projects/${project.key}/backlog`)} className={buttonStyles({ variant: "primary", className: "mt-2" })}>
           Plan a sprint
         </Link>
       </main>

@@ -76,6 +76,11 @@ const MESSAGES: Record<ErrorCode, Message> = {
       ? `Something went wrong on our side. If it keeps happening, report reference ${e.requestId}.`
       : "Something went wrong on our side. Please try again.",
   EMAIL_DELIVERY_FAILED: "The email couldn't be sent. The invite was saved, so try Resend.",
+  VERIFY_TOKEN_INVALID: "This verification link is invalid or has expired. Request a new one.",
+  EMAIL_UNVERIFIED: "Verify your email address before inviting people.",
+  INVITE_EMAIL_MISMATCH: "This invite was sent to a different email. Sign in with the invited address to join.",
+  DEMO_WORKSPACE_LOCKED: "The shared demo workspace can't be changed this way. Create your own workspace to try it.",
+  DEMO_ACCOUNT_LOCKED: "The shared demo account can't change this. Sign up for your own account to try it.",
 };
 
 /** The message to show for any error thrown by `apiFetch` (or anything else). */

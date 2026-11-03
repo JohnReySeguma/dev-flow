@@ -31,6 +31,8 @@ type TeamMembersProps = {
   currentUserId: string;
   /** Only admins manage members; everyone else sees the list read-only. */
   canManage: boolean;
+  /** Why the list is read-only for an admin too (e.g. the shared demo workspace). */
+  lockedReason?: string;
   actions: TeamActions;
   /** Re-fetch the list (e.g. after an invite was saved but its email failed). */
   onReload?: () => void;
@@ -38,7 +40,7 @@ type TeamMembersProps = {
 
 const replace = (updated: TeamMember) => (team: TeamMember[]) => team.map((m) => (m.id === updated.id ? updated : m));
 
-export function TeamMembers({ team, onTeamChange, currentUserId, canManage, actions, onReload }: TeamMembersProps) {
+export function TeamMembers({ team, onTeamChange, currentUserId, canManage, lockedReason, actions, onReload }: TeamMembersProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("member");
   const [inviteError, setInviteError] = useState<string>();
@@ -182,7 +184,7 @@ export function TeamMembers({ team, onTeamChange, currentUserId, canManage, acti
       ) : (
         <p className="flex items-center gap-2 border-b border-line px-5 py-3 text-[12.5px] text-zinc-500">
           <Lock aria-hidden className="size-3.5" />
-          Only admins can invite people, change roles or remove members.
+          {lockedReason ?? "Only admins can invite people, change roles or remove members."}
         </p>
       )}
 
@@ -379,8 +381,9 @@ function RemoveMemberDialog({
             </>
           ) : (
             <>
-              <span className="text-zinc-200">{member.name}</span> ({member.email}) loses access immediately. Their account,
-              sessions and access tokens are deleted. This can&apos;t be undone.
+              <span className="text-zinc-200">{member.name}</span> ({member.email}) loses access to this workspace
+              immediately, and their access tokens for it are deleted. Their account and other workspaces stay; you can
+              invite them back later.
             </>
           )}
         </p>

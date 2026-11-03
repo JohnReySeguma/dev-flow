@@ -4,14 +4,15 @@ import { useSyncExternalStore } from "react";
 import { getSession, login, logout, signup } from "./auth";
 import { onSignedOut } from "./client";
 import { isApiMode } from "./config";
-import type { AcceptInviteRequest, AuthMe, LoginRequest, SignupRequest, UserProfile } from "./types";
+import type { AcceptInviteRequest, AuthMe, LoginRequest, SignupRequest, UserProfile, WorkspaceSummary } from "./types";
 import { acceptInvite } from "./workspace";
 
 export type SessionState =
   /** No API: the app runs on local demo data with the fixture user. */
   | { status: "demo" }
   | { status: "loading" }
-  | { status: "signed-in"; user: UserProfile; workspace: AuthMe["workspace"] }
+  /** `workspaces`: every workspace the account belongs to, oldest membership first, with its role in each. */
+  | { status: "signed-in"; user: UserProfile; workspaces: WorkspaceSummary[] }
   /** `logout`: the user asked to leave; `expired`: the API reported the session gone (or there never was one). */
   | { status: "signed-out"; reason: "logout" | "expired" }
   /** The session check failed for another reason (API unreachable, rate limited, server error). */
@@ -30,7 +31,7 @@ function publish(next: SessionState) {
 }
 
 function signedIn(me: AuthMe): SessionState {
-  return { status: "signed-in", user: me.user, workspace: me.workspace };
+  return { status: "signed-in", user: me.user, workspaces: me.workspaces };
 }
 
 // Any request (or refresh) that learns the session is gone flips the whole app to signed out.
@@ -83,6 +84,23 @@ export async function signOut(): Promise<void> {
 export function forgetSession() {
   if (isApiMode()) publish({ status: "signed-out", reason: "expired" });
 }
+
+/**
+ * Re-reads `GET /auth/me` while staying signed in, e.g. after creating, leaving or deleting a workspace, or when a
+ * workspace answers 404 (removed or deleted). Resolves with the new state.
+ */
+export async function reloadSession(): Promise<SessionState> {
+  if (!isApiMode()) return state;
+  try {
+    publish(signedIn(await getSession()));
+  } catch (error) {
+    if (state.status !== "signed-out") publish({ status: "error", error });
+  }
+  return state;
+}
+
+/** The current state outside React (event handlers, redirects). */
+export const getSessionState = () => state;
 
 /** Keeps the shell (sidebar, header) in step after the profile is saved. */
 export function setSessionUser(user: UserProfile) {

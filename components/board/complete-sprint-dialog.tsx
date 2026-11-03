@@ -9,8 +9,10 @@ import { progressOf, projectSprints, sprintIssues } from "@/lib/tracker/selector
 import { completeSprint, useTracker, type CarryOver } from "@/lib/tracker/store";
 import type { Sprint } from "@/lib/tracker/types";
 import { cn } from "@/lib/utils";
+import { useWorkspaceRoute } from "@/components/workspace/workspace-context";
 
 export function CompleteSprintDialog({ sprint, open, onClose }: { sprint: Sprint; open: boolean; onClose: () => void }) {
+  const { href } = useWorkspaceRoute();
   const { project } = useProject();
   const state = useTracker();
   const router = useRouter();
@@ -31,7 +33,7 @@ export function CompleteSprintDialog({ sprint, open, onClose }: { sprint: Sprint
       target === "backlog" ? { kind: "backlog" } : target === "new" ? { kind: "new-sprint" } : { kind: "sprint", sprintId: target };
     completeSprint(sprint.id, carryOver);
     onClose();
-    router.push(`/projects/${project.key}/reports`);
+    router.push(href(`/projects/${project.key}/reports`));
   }
 
   return (

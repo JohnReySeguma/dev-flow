@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, KeyRound, Plus, Terminal, TriangleAlert, X } from "lucide-react";
+import { CircleAlert, KeyRound, Lock, Plus, Terminal, TriangleAlert, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -10,14 +10,22 @@ import { ACCESS_TOKENS, TOKEN_SCOPES, type AccessToken, type TokenScope } from "
 import { createAccessToken, listAccessTokens, revokeAccessToken } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { errorMessage, fieldErrors } from "@/lib/api/errors";
+import { useSession } from "@/lib/api/session";
 import { useNow } from "@/lib/use-now";
 import { cn, formatDate, timeAgo } from "@/lib/utils";
+import { chooseWorkspace, DEMO_WORKSPACE_SLUG } from "@/lib/workspace-route";
 
-type NewToken = { name: string; scopes: TokenScope[]; expiresInDays: number | null };
+/** `workspace`: the slug the token works in (API v2 binds every token to one workspace). */
+type NewToken = { name: string; scopes: TokenScope[]; expiresInDays: number | null; workspace: string };
+
+/** A token as listed: API tokens also say which workspace they work in (demo fixtures have none). */
+type TokenRow = AccessToken & { workspace?: { id: string; slug: string; name: string } };
+
+type WorkspaceOption = { slug: string; name: string };
 
 /** Every page of `GET /me/tokens`, newest first. */
-async function loadAllTokens(): Promise<AccessToken[]> {
-  const tokens: AccessToken[] = [];
+async function loadAllTokens(): Promise<TokenRow[]> {
+  const tokens: TokenRow[] = [];
   let cursor: string | null = null;
   do {
     const page = await listAccessTokens(cursor);
@@ -28,7 +36,7 @@ async function loadAllTokens(): Promise<AccessToken[]> {
 }
 
 /** Demo mode keeps minting a local secret; API mode returns the server's, shown exactly once. */
-async function mintToken(input: NewToken): Promise<{ token: AccessToken; secret: string }> {
+async function mintToken(input: NewToken): Promise<{ token: TokenRow; secret: string }> {
   if (isApiMode()) return createAccessToken(input);
   const secret = generateSecret();
   const now = Date.now();
@@ -62,7 +70,7 @@ function generateSecret() {
 }
 
 export function AccessTokens() {
-  const [tokens, setTokens] = useState<AccessToken[]>(isApiMode() ? [] : ACCESS_TOKENS);
+  const [tokens, setTokens] = useState<TokenRow[]>(isApiMode() ? [] : ACCESS_TOKENS);
   const [load, setLoad] = useState<{ status: "loading" | "ready" } | { status: "error"; error: unknown }>({
     status: isApiMode() ? "loading" : "ready",
   });
@@ -73,6 +81,12 @@ export function AccessTokens() {
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<{ id: string; message: string } | null>(null);
   const now = useNow();
+  const session = useSession();
+  // Tokens work in one workspace; default to the one used last (if still yours), as the profile is global.
+  const defaultWorkspace =
+    session.status === "signed-in" ? (chooseWorkspace(session.workspaces.map((w) => w.slug)) ?? "") : DEMO_WORKSPACE_SLUG;
+  // The shared demo account can look but not generate or revoke.
+  const locked = session.status === "signed-in" && session.user.isDemo;
 
   // Never leave a plaintext secret on screen once the page is navigated away from.
   useLayoutEffect(() => {
@@ -121,7 +135,8 @@ export function AccessTokens() {
       title="Developer credentials"
       description="Personal access tokens authenticate the devflow CLI and REST API as you."
       actions={
-        !creating && (
+        !creating &&
+        !locked && (
           <Button variant="secondary" onClick={() => setCreating(true)}>
             <Plus aria-hidden className="size-3.5" />
             Generate token
@@ -130,6 +145,11 @@ export function AccessTokens() {
       }
       bodyClassName="flex flex-col gap-4"
     >
+      {locked && (
+        <p className="flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[12.5px] text-amber-200">
+          <Lock aria-hidden className="size-3.5 shrink-0" /> The shared demo account can&apos;t generate or revoke tokens. Sign up to get your own.
+        </p>
+      )}
       {revealed && (
         <div role="status" className="animate-pop-in rounded-lg border border-emerald-500/25 bg-emerald-500/[0.05] p-4">
           <div className="flex items-start gap-2">
@@ -162,7 +182,14 @@ export function AccessTokens() {
         </div>
       )}
 
-      {creating && <CreateTokenForm onCancel={() => setCreating(false)} onCreate={create} />}
+      {creating && (
+        <CreateTokenForm
+          workspaces={session.status === "signed-in" ? session.workspaces.map(({ slug, name }) => ({ slug, name })) : []}
+          defaultWorkspace={defaultWorkspace}
+          onCancel={() => setCreating(false)}
+          onCreate={create}
+        />
+      )}
 
       {load.status === "loading" ? (
         <div role="status" aria-busy="true" className="flex flex-col gap-2">
@@ -202,6 +229,11 @@ export function AccessTokens() {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-[13px] font-medium text-zinc-100">{token.name}</p>
                   <code className="font-mono text-[11px] text-zinc-500">dfp_••••{token.lastFour}</code>
+                  {token.workspace && (
+                    <span className="rounded border border-line-strong bg-raised px-1.5 py-px text-[10.5px] text-zinc-400">
+                      Works in {token.workspace.name}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {token.scopes.map((scope) => (
@@ -239,9 +271,11 @@ export function AccessTokens() {
                       </Button>
                     </>
                   ) : (
-                    <Button size="sm" variant="secondary" onClick={() => setConfirmRevokeId(token.id)}>
-                      Revoke
-                    </Button>
+                    !locked && (
+                      <Button size="sm" variant="secondary" onClick={() => setConfirmRevokeId(token.id)}>
+                        Revoke
+                      </Button>
+                    )
                   )}
                 </div>
                 {revokeError?.id === token.id && (
@@ -259,9 +293,15 @@ export function AccessTokens() {
 }
 
 function CreateTokenForm({
+  workspaces,
+  defaultWorkspace,
   onCancel,
   onCreate,
 }: {
+  /** The workspaces a token can be bound to (API mode); empty in demo mode. */
+  workspaces: WorkspaceOption[];
+  /** Preselected: the workspace used last. */
+  defaultWorkspace: string;
   onCancel: () => void;
   /** Rejects with the API's error, shown in the form. */
   onCreate: (input: NewToken) => Promise<void>;
@@ -269,6 +309,7 @@ function CreateTokenForm({
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<TokenScope[]>(["issues:read"]);
   const [expiryDays, setExpiryDays] = useState<number>(90);
+  const [workspace, setWorkspace] = useState(defaultWorkspace);
   const [submitted, setSubmitted] = useState(false);
   const [pending, setPending] = useState(false);
   const [server, setServer] = useState<{ fields: Record<string, string>; message: string | null }>({ fields: {}, message: null });
@@ -285,7 +326,7 @@ function CreateTokenForm({
 
     setPending(true);
     try {
-      await onCreate({ name: name.trim(), scopes, expiresInDays: expiryDays || null });
+      await onCreate({ name: name.trim(), scopes, expiresInDays: expiryDays || null, workspace });
     } catch (error) {
       // Scope errors arrive per item (`scopes.0`); show them once, on the group.
       const fields = Object.fromEntries(Object.entries(fieldErrors(error)).map(([field, message]) => [field.split(".")[0], message]));
@@ -325,6 +366,28 @@ function CreateTokenForm({
             ))}
           </Select>
         </Field>
+        {workspaces.length > 0 && (
+          <Field
+            id="token-workspace"
+            label="Workspace"
+            hint="The token can only reach this workspace."
+            error={server.fields.workspace}
+            className="sm:col-span-2"
+          >
+            <Select
+              id="token-workspace"
+              value={workspace}
+              onChange={(e) => setWorkspace(e.target.value)}
+              {...describedBy("token-workspace", { error: server.fields.workspace, hasHint: true })}
+            >
+              {workspaces.map((w) => (
+                <option key={w.slug} value={w.slug}>
+                  {w.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
       </div>
 
       <fieldset aria-describedby={scopeError ? "token-scopes-error" : undefined}>

@@ -1,21 +1,24 @@
 "use client";
 
-import { AtSign, Check, CircleAlert, Globe, RotateCcw, ShieldCheck } from "lucide-react";
+import { AtSign, Check, CircleAlert, Globe, Lock, RotateCcw, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { describedBy, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Section } from "@/components/ui/section";
-import { AVATAR_GRADIENTS, ROLES, SESSION_USER, TIMEZONES, type UserProfile } from "@/lib/account-data";
+import { AVATAR_GRADIENTS, ROLES, SESSION_USER, TIMEZONES, type UserProfile as FixtureProfile } from "@/lib/account-data";
 import { getProfile, updateProfile } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
-import { setSessionUser } from "@/lib/api/session";
+import { setSessionUser, useSession } from "@/lib/api/session";
 import type { UpdateProfileRequest, UserProfile as ApiUserProfile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const BIO_MAX = 280;
 const NAME_MAX = 48;
+
+/** The profile as the editor shows it. API v2 profiles have no role (roles are per workspace); demo mode has one. */
+type UserProfile = Omit<FixtureProfile, "role"> & { role?: FixtureProfile["role"] };
 
 type Draft = Pick<UserProfile, "name" | "gradient" | "timezone" | "bio">;
 type DraftErrors = Partial<Record<keyof Draft, string>>;
@@ -54,6 +57,9 @@ function saveDemo(profile: UserProfile, draft: Draft): Promise<SaveResult> {
 type Loaded = { status: "loading" } | { status: "ready"; profile: UserProfile } | { status: "error"; error: unknown };
 
 function ApiProfile() {
+  const session = useSession();
+  // The shared demo account is read-only; the API would answer DEMO_ACCOUNT_LOCKED anyway.
+  const locked = session.status === "signed-in" && session.user.isDemo;
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   // Bumped to re-fetch and remount the editor with fresh values (after a conflict, or "Try again").
   const [version, setVersion] = useState(0);
@@ -113,7 +119,7 @@ function ApiProfile() {
     }
   }
 
-  return <ProfileEditor key={version} initial={loaded.profile} onSave={save} onReload={reload} />;
+  return <ProfileEditor key={version} initial={loaded.profile} locked={locked} onSave={save} onReload={reload} />;
 }
 
 function ProfileSkeleton() {
@@ -131,10 +137,12 @@ type EditorProps = {
   onSave: (profile: UserProfile, draft: Draft) => Promise<SaveResult>;
   /** Offered after a conflict: discard the draft and load the latest saved profile. */
   onReload?: () => void;
+  /** Read-only (the shared demo account): fields disabled, no save. */
+  locked?: boolean;
 };
 
 /** Header + form; the header reflects saved values only. */
-function ProfileEditor({ initial, onSave, onReload }: EditorProps) {
+function ProfileEditor({ initial, onSave, onReload, locked = false }: EditorProps) {
   const [profile, setProfile] = useState<UserProfile>(initial);
   const [draft, setDraft] = useState<Draft>(() => toDraft(initial));
   const [saving, setSaving] = useState(false);
@@ -222,33 +230,39 @@ function ProfileEditor({ initial, onSave, onReload }: EditorProps) {
         title="Personal settings"
         description="How you appear to teammates on boards, comments and mentions."
         footer={
-          <>
-            <span aria-live="polite" className="mr-auto text-[12px] text-zinc-500">
-              {saveError ? (
-                <span role="alert" className="flex items-center gap-1.5 text-red-300">
-                  <CircleAlert aria-hidden className="size-3.5 shrink-0" /> {saveError.message}
-                </span>
-              ) : justSaved ? (
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <Check aria-hidden className="size-3.5" /> Changes saved
-                </span>
-              ) : dirty ? (
-                "You have unsaved changes"
-              ) : null}
-            </span>
-            {saveError?.stale && onReload ? (
-              <Button variant="secondary" onClick={onReload}>
-                <RotateCcw aria-hidden className="size-3.5" /> Load latest
+          locked ? (
+            <p className="mr-auto flex items-center gap-1.5 text-[12px] text-amber-200">
+              <Lock aria-hidden className="size-3.5 shrink-0" /> The shared demo account is read-only. Sign up to edit your own profile.
+            </p>
+          ) : (
+            <>
+              <span aria-live="polite" className="mr-auto text-[12px] text-zinc-500">
+                {saveError ? (
+                  <span role="alert" className="flex items-center gap-1.5 text-red-300">
+                    <CircleAlert aria-hidden className="size-3.5 shrink-0" /> {saveError.message}
+                  </span>
+                ) : justSaved ? (
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <Check aria-hidden className="size-3.5" /> Changes saved
+                  </span>
+                ) : dirty ? (
+                  "You have unsaved changes"
+                ) : null}
+              </span>
+              {saveError?.stale && onReload ? (
+                <Button variant="secondary" onClick={onReload}>
+                  <RotateCcw aria-hidden className="size-3.5" /> Load latest
+                </Button>
+              ) : (
+                <Button variant="ghost" disabled={!dirty || saving} onClick={() => setDraft(toDraft(profile))}>
+                  Discard
+                </Button>
+              )}
+              <Button variant="primary" disabled={!dirty || !!nameError} loading={saving} onClick={() => void save()}>
+                Save changes
               </Button>
-            ) : (
-              <Button variant="ghost" disabled={!dirty || saving} onClick={() => setDraft(toDraft(profile))}>
-                Discard
-              </Button>
-            )}
-            <Button variant="primary" disabled={!dirty || !!nameError} loading={saving} onClick={() => void save()}>
-              Save changes
-            </Button>
-          </>
+            </>
+          )
         }
       >
         <form
@@ -256,92 +270,93 @@ function ProfileEditor({ initial, onSave, onReload }: EditorProps) {
             e.preventDefault();
             if (dirty) void save();
           }}
-          className="grid gap-6 md:grid-cols-[160px_1fr]"
         >
-          <fieldset className="flex flex-col items-start gap-3">
-            <legend className="mb-3 text-[13px] font-medium text-zinc-300">Avatar</legend>
-            <Avatar member={previewMember} size="xl" />
-            <div role="radiogroup" aria-label="Avatar color" className="flex flex-wrap gap-1.5">
-              {AVATAR_GRADIENTS.map(({ value: gradient, label }) => {
-                const selected = draft.gradient === gradient;
-                return (
-                  <button
-                    key={gradient}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    aria-label={label}
-                    title={label}
-                    onClick={() => update("gradient", gradient)}
-                    className={cn(
-                      "size-5 rounded-full bg-gradient-to-br outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
-                      gradient,
-                      selected && "ring-2 ring-white ring-offset-2 ring-offset-surface",
-                    )}
-                  />
-                );
-              })}
-            </div>
-            {serverErrors.gradient ? (
-              <p role="alert" className="text-[12px] text-red-400">
-                {serverErrors.gradient}
-              </p>
-            ) : (
-              <p className="text-[12px] text-zinc-500">Initials update from your display name.</p>
-            )}
-          </fieldset>
+          <fieldset disabled={locked} className="grid min-w-0 gap-6 md:grid-cols-[160px_1fr]">
+            <fieldset className="flex flex-col items-start gap-3">
+              <legend className="mb-3 text-[13px] font-medium text-zinc-300">Avatar</legend>
+              <Avatar member={previewMember} size="xl" />
+              <div role="radiogroup" aria-label="Avatar color" className="flex flex-wrap gap-1.5">
+                {AVATAR_GRADIENTS.map(({ value: gradient, label }) => {
+                  const selected = draft.gradient === gradient;
+                  return (
+                    <button
+                      key={gradient}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-label={label}
+                      title={label}
+                      onClick={() => update("gradient", gradient)}
+                      className={cn(
+                        "size-5 rounded-full bg-gradient-to-br outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+                        gradient,
+                        selected && "ring-2 ring-white ring-offset-2 ring-offset-surface",
+                      )}
+                    />
+                  );
+                })}
+              </div>
+              {serverErrors.gradient ? (
+                <p role="alert" className="text-[12px] text-red-400">
+                  {serverErrors.gradient}
+                </p>
+              ) : (
+                <p className="text-[12px] text-zinc-500">Initials update from your display name.</p>
+              )}
+            </fieldset>
 
-          <div className="flex flex-col gap-5">
-            <Field id="display-name" label="Display name" error={nameError}>
-              <Input
-                id="display-name"
-                value={draft.name}
-                maxLength={NAME_MAX}
-                autoComplete="name"
-                onChange={(e) => update("name", e.target.value)}
-                {...describedBy("display-name", { error: nameError })}
-              />
-            </Field>
+            <div className="flex flex-col gap-5">
+              <Field id="display-name" label="Display name" error={nameError}>
+                <Input
+                  id="display-name"
+                  value={draft.name}
+                  maxLength={NAME_MAX}
+                  autoComplete="name"
+                  onChange={(e) => update("name", e.target.value)}
+                  {...describedBy("display-name", { error: nameError })}
+                />
+              </Field>
 
-            <Field id="timezone" label="Timezone" hint="Due dates and cycle boundaries use this zone." error={serverErrors.timezone}>
-              <Select
-                id="timezone"
-                value={draft.timezone}
-                onChange={(e) => update("timezone", e.target.value)}
-                {...describedBy("timezone", { error: serverErrors.timezone, hasHint: true })}
-              >
-                {timezones.map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+              <Field id="timezone" label="Timezone" hint="Due dates and cycle boundaries use this zone." error={serverErrors.timezone}>
+                <Select
+                  id="timezone"
+                  value={draft.timezone}
+                  onChange={(e) => update("timezone", e.target.value)}
+                  {...describedBy("timezone", { error: serverErrors.timezone, hasHint: true })}
+                >
+                  {timezones.map((tz) => (
+                    <option key={tz} value={tz}>
+                      {tz.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
-            <Field
-              id="bio"
-              label="Developer bio"
-              error={serverErrors.bio}
-              hint={
-                <span className="flex justify-between">
-                  <span>Shown on your profile card and in @mentions.</span>
-                  <span className={cn("tabular-nums", draft.bio.length > BIO_MAX - 20 && "text-amber-400")}>
-                    {draft.bio.length}/{BIO_MAX}
-                  </span>
-                </span>
-              }
-            >
-              <Textarea
+              <Field
                 id="bio"
-                rows={4}
-                maxLength={BIO_MAX}
-                value={draft.bio}
-                placeholder="What do you work on?"
-                onChange={(e) => update("bio", e.target.value)}
-                {...describedBy("bio", { error: serverErrors.bio, hasHint: true })}
-              />
-            </Field>
-          </div>
+                label="Developer bio"
+                error={serverErrors.bio}
+                hint={
+                  <span className="flex justify-between">
+                    <span>Shown on your profile card and in @mentions.</span>
+                    <span className={cn("tabular-nums", draft.bio.length > BIO_MAX - 20 && "text-amber-400")}>
+                      {draft.bio.length}/{BIO_MAX}
+                    </span>
+                  </span>
+                }
+              >
+                <Textarea
+                  id="bio"
+                  rows={4}
+                  maxLength={BIO_MAX}
+                  value={draft.bio}
+                  placeholder="What do you work on?"
+                  onChange={(e) => update("bio", e.target.value)}
+                  {...describedBy("bio", { error: serverErrors.bio, hasHint: true })}
+                />
+              </Field>
+            </div>
+          </fieldset>
         </form>
       </Section>
     </>

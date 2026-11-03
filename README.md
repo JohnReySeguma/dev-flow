@@ -19,7 +19,7 @@
 - **Backlog & sprint planning** — rank issues by drag-and-drop, move them between sprints, start a sprint with a goal and duration, complete it and carry unfinished work forward.
 - **Reports** — live burndown for the active sprint, velocity (committed vs. completed) and a sprint history table, drawn as accessible SVG charts with hover tooltips.
 - **Issue detail sheet** — edit status, sprint, assignee, priority, type and story points in place.
-- **Workspace** — projects overview, profile settings, personal access tokens, team roles and invites.
+- **Workspaces** — a switcher between workspaces, projects overview, profile settings, personal access tokens, team roles and invites.
 - **Public site** — landing page with a live board preview, legal pages, status page, custom 404 and a working contact form.
 
 ## The process it models
@@ -56,15 +56,18 @@ There is no backend: demo data lives in the browser and can be reset from **Work
 ```
 app/
   (marketing)/      landing, privacy, terms, security, status
-  (auth)/           login, signup
+  (auth)/           login, signup, invite, reset-password
   (app)/            signed-in shell (sidebar)
-    projects/       overview + [key]/{board,backlog,reports,settings}
-    profile/        personal settings & access tokens
-    settings/       workspace members & demo data
+    w/[slug]/       one workspace (demo mode: acme-inc)
+      projects/     overview + [key]/{board,backlog,reports,settings}
+      settings/     workspace name, members, demo data, leave/delete
+    profile/        personal settings & access tokens (global)
+    welcome/        no workspace yet: create the first one
+    projects/ settings/   old URLs, redirected into your workspace
 components/
   ui/               design-system primitives (button, field, dialog, dropdown…)
   board/ backlog/ reports/ project/ projects/   feature modules
-  layout/ marketing/ auth/ profile/ settings/
+  layout/ marketing/ auth/ profile/ settings/ workspace/
 lib/
   tracker/          domain types, seed data, selectors, store
   utils.ts          class merging, date helpers
@@ -91,20 +94,20 @@ DevFlow runs in one of two modes, chosen by a single variable:
 | `NEXT_PUBLIC_API_URL` | Mode | Behaviour |
 | --- | --- | --- |
 | empty (default) | **Demo** | Everything runs in the browser on sample data in `localStorage`; no request reaches a server. |
-| `http://localhost:4000/api/v1` | **API** | The app talks to the [DevFlow API](https://github.com/JohnReySeguma/dev-flow-be). |
+| `http://localhost:4000/api/v2` | **API** | The app talks to the [DevFlow API](https://github.com/JohnReySeguma/dev-flow-be). |
 
 1. Start the API (from the API repo, with Docker Desktop running):
 
    ```bash
    cd ../DevFlow-be
    docker compose up -d
-   curl http://localhost:4000/api/v1/health/ready   # 200 when ready
+   curl http://localhost:4000/api/v2/health/ready   # 200 when ready
    ```
 
 2. Point the frontend at it and start it **on port 3000**. The API only accepts browser requests from `http://localhost:3000`.
 
    ```bash
-   cp .env.example .env.local   # then set NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+   cp .env.example .env.local   # then set NEXT_PUBLIC_API_URL=http://localhost:4000/api/v2
    npm run dev
    ```
 
@@ -115,9 +118,12 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Accounts:** real sign-in, sign-up and logout; the app checks the session on load and sends signed-out visitors to `/login` (returning them afterwards). Expired access tokens are renewed transparently, one refresh at a time.
 - **Sign-in options:** only the OAuth providers `GET /config` enables (none if the API is unreachable; email sign-in always stays available). GitHub and Google redirect through the API and back.
 - **Password reset:** "Forgot password?" emails a link to the new `/reset-password` page.
-- **Profile:** your profile and personal access tokens.
-- **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation.
-- **Permissions:** controls follow your role. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
+- **Workspaces:** every page of a workspace lives under `/w/<slug>/…`. The sidebar switcher lists your workspaces with your role in each and creates new ones (optionally with sample projects); `/welcome` greets accounts without any. The app reopens the workspace you used last if it is still yours. Old links like `/projects` redirect into it.
+- **Workspace settings:** admins rename (the URL stays) and delete a workspace; anyone can leave it. Losing access, here or from another tab, moves you to another workspace.
+- **Profile:** your profile and personal access tokens; each token works in one workspace, picked when you generate it.
+- **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation. Sign-up opens your new workspace; accepting an invite opens the inviting one.
+- **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
+- **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
 Projects, sprints and issues still use the local demo data while the integration proceeds step by step ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
@@ -134,12 +140,12 @@ All API access lives in [`lib/api/`](lib/api/):
 | `errors.ts` | `ApiError`, `NetworkError`, and a message for every API error code |
 | `auth.ts` | Typed calls for sign-in, sign-up, logout, password reset, OAuth URLs, profile and access tokens |
 | `session.ts` | `useSession()`: who is signed in, shared by the session gate, sidebar and profile |
-| `workspace.ts` | Typed calls for the workspace, members, roles and invites |
-| `permissions.ts` | `usePermissions()`: what the signed-in role may do |
+| `workspace.ts` | Typed calls for workspaces, members, roles and invites |
+| `permissions.ts` | `usePermissions()`: what your role in the current workspace allows |
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
 
-The types are generated from the API's spec at tag **`v1.0.1`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. The API is final, so regenerate only when a later API release changes its spec: update the tag in the `api:types` script, then run
+The types are generated from the API's spec at tag **`v2.0.0-beta.5`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. Regenerate when a later API release changes its spec: update the tag in the `api:types` script, then run
 
 ```bash
 npm run api:types

@@ -1,13 +1,6 @@
-import type { Metadata } from "next";
-import { PageContainer } from "@/components/layout/page-container";
-import { SettingsView } from "@/components/settings/settings-view";
+import { WorkspaceRedirect } from "@/components/workspace/workspace-redirect";
 
-export const metadata: Metadata = { title: "Workspace settings" };
-
-export default function SettingsPage() {
-  return (
-    <PageContainer>
-      <SettingsView />
-    </PageContainer>
-  );
+/** /settings (old links): open the settings of the right workspace. */
+export default function SettingsRedirectPage() {
+  return <WorkspaceRedirect />;
 }
