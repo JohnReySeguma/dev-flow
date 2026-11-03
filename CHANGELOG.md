@@ -5,6 +5,26 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-03
+
+Step 4 of the API integration: multiple workspaces on API v2 (`v2.0.0-beta.5`).
+
+### Added
+
+- A workspace switcher in the sidebar lists your workspaces with your role in each (the shared demo one is marked) and creates new ones, optionally with sample projects. Accounts without a workspace see a new `/welcome` page.
+- Workspace settings show the name and URL: admins rename (the URL stays the same) and delete after typing the name; anyone can leave. `LAST_ADMIN` explains what to do instead.
+- Generate token asks which workspace the token works in (default: the one used last), and the list shows each token's workspace.
+- Sign-up opens the new account's own workspace; accepting an invite opens the inviting workspace.
+
+### Changed
+
+- **Breaking:** API mode needs API v2: set `NEXT_PUBLIC_API_URL` to `http://localhost:4000/api/v2`. Types are generated from the `v2.0.0-beta.5` spec.
+- Workspace pages moved under `/w/<slug>/…` (demo mode: `/w/acme-inc/…`). Old links such as `/projects/DEV/board` and `/settings` redirect into the workspace you used last, if it is still yours. Profile and the sign-in, invite and reset pages stay global.
+- Roles and permissions follow your role in the current workspace.
+- Losing access to a workspace (leaving, deleting, being removed, or a `404`) refreshes your workspaces and opens another one, or `/welcome`.
+- In the shared demo workspace, renaming, deleting, leaving, invites and member changes are hidden; resetting the sample data stays available to admins. The shared demo accounts see their profile and tokens read-only, and sign-in explains `oauth_account_locked`.
+- Accepting an invite whose email signed up in the meantime (`EMAIL_TAKEN`) asks you to sign in instead.
+
 ## [1.3.0] - 2026-11-02
 
 Step 3 of the API integration: the workspace (API `v0.3.0`).
@@ -96,6 +116,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[1.4.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.0.0...v1.1.0
