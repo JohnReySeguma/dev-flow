@@ -13,6 +13,7 @@ import { joinWorkspace } from "@/lib/api/session";
 import type { InvitePreview } from "@/lib/api/types";
 import { getInvite } from "@/lib/api/workspace";
 import { formatDate } from "@/lib/utils";
+import { workspacePath } from "@/lib/workspace-route";
 
 export function InviteCard({ children }: { children: ReactNode }) {
   return (
@@ -173,12 +174,16 @@ function AcceptInvite({ token }: { token: string }) {
 
     setPending(true);
     try {
-      await joinWorkspace(token, { name: name.trim(), password });
-      router.push("/projects");
+      // The new account belongs to the inviting workspace only, so that is where it lands.
+      const me = await joinWorkspace(token, { name: name.trim(), password });
+      router.push(workspacePath(me.workspaces[0]?.slug ?? invite.workspace.slug));
     } catch (error) {
       setPending(false);
       if (error instanceof ApiError && error.code === "INVITE_INVALID") return setLoad({ status: "invalid" });
-      if (error instanceof ApiError && error.code === "ALREADY_MEMBER") return setLoad({ status: "already-member" });
+      // EMAIL_TAKEN: the email signed up in the meantime, so it has to sign in instead.
+      if (error instanceof ApiError && (error.code === "EMAIL_TAKEN" || error.code === "ALREADY_MEMBER")) {
+        return setLoad({ status: "already-member" });
+      }
       const fields = fieldErrors(error);
       if (fields.name || fields.password) setErrors({ name: fields.name, password: fields.password });
       else setFormError(errorMessage(error));

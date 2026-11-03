@@ -11,8 +11,10 @@ import { oauthUrl, requestPasswordReset, safeRedirect } from "@/lib/api/auth";
 import { isApiMode } from "@/lib/api/config";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
 import { signIn, signUp } from "@/lib/api/session";
+import type { AuthMe } from "@/lib/api/types";
 import { usePublicConfig } from "@/lib/api/use-public-config";
 import { cn } from "@/lib/utils";
+import { workspacePath } from "@/lib/workspace-route";
 
 export type AuthMode = "login" | "signup";
 
@@ -40,6 +42,13 @@ const COPY: Record<AuthMode, { title: string; subtitle: string; submit: string }
 /** Where to go after signing in: `?next=` when it is a path on this site, otherwise the projects overview. */
 function nextPath() {
   return safeRedirect(new URLSearchParams(window.location.search).get("next"));
+}
+
+/** After sign-up: `?next=` when one was given, otherwise the new account's own workspace. */
+function landingAfterSignup(me: AuthMe) {
+  if (new URLSearchParams(window.location.search).has("next")) return nextPath();
+  const own = me.workspaces[0];
+  return own ? workspacePath(own.slug) : "/welcome";
 }
 
 /** Why the API sent the browser back to `/login?error=…` after OAuth (INTEGRATION §5.5). */
@@ -161,9 +170,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setPending("email");
     setFormError(null);
     try {
-      if (mode === "login") await signIn({ email: values.email.trim(), password: values.password });
-      else await signUp({ name: values.name.trim(), email: values.email.trim(), password: values.password });
-      router.push(nextPath());
+      if (mode === "login") {
+        await signIn({ email: values.email.trim(), password: values.password });
+        router.push(nextPath());
+      } else {
+        const me = await signUp({ name: values.name.trim(), email: values.email.trim(), password: values.password });
+        router.push(landingAfterSignup(me));
+      }
     } catch (error) {
       setPending(null);
       const fields = formFieldErrors(error);
