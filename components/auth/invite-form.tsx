@@ -1,17 +1,17 @@
 "use client";
 
-import { ArrowRight, CircleAlert, Eye, EyeOff, Link2Off, MailPlus, UserCheck } from "lucide-react";
+import { ArrowRight, CircleAlert, Eye, EyeOff, Link2Off, LogIn, MailPlus, UserCheck, UserRoundX } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { describedBy, Field, Input } from "@/components/ui/field";
 import { ROLES } from "@/lib/account-data";
 import { isApiMode } from "@/lib/api/config";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/api/errors";
-import { joinWorkspace } from "@/lib/api/session";
+import { checkSession, joinWorkspace, reloadSession, signOut, useSession } from "@/lib/api/session";
 import type { InvitePreview } from "@/lib/api/types";
-import { getInvite } from "@/lib/api/workspace";
+import { getInvite, joinInvite } from "@/lib/api/workspace";
 import { formatDate } from "@/lib/utils";
 import { workspacePath } from "@/lib/workspace-route";
 
@@ -23,16 +23,29 @@ export function InviteCard({ children }: { children: ReactNode }) {
       </div>
       <p className="mt-6 text-center text-[13px] text-zinc-500">
         Already have an account?{" "}
-        <Link
-          href="/login"
-          className="rounded font-medium text-zinc-200 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50"
-        >
-          Sign in
-        </Link>
+        <Suspense fallback={<SignInLink href="/login" />}>
+          <SignInBackHere />
+        </Suspense>
       </p>
     </div>
   );
 }
+
+function SignInLink({ href }: { href: string }) {
+  return (
+    <Link href={href} className="rounded font-medium text-zinc-200 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50">
+      Sign in
+    </Link>
+  );
+}
+
+/** Signing in from an invite comes back to it, to join. */
+function SignInBackHere() {
+  const token = useSearchParams().get("token");
+  return <SignInLink href={token ? loginThenInvite(token) : "/login"} />;
+}
+
+const loginThenInvite = (token: string) => `/login?next=${encodeURIComponent(`/invite?token=${token}`)}`;
 
 export function InviteSkeleton() {
   return (
@@ -69,7 +82,6 @@ type Load =
   | { status: "loading" }
   | { status: "ready"; invite: InvitePreview }
   | { status: "invalid" }
-  | { status: "already-member" }
   | { status: "error"; error: unknown };
 
 /** Opened from the emailed link `/invite?token=…` (the API's INTEGRATION §5.7). */
@@ -128,14 +140,6 @@ function AcceptInvite({ token }: { token: string }) {
     );
   }
 
-  if (load.status === "already-member") {
-    return (
-      <Message icon={<UserCheck aria-hidden className="size-4 text-emerald-400" />} title="You already have an account" action={signInButton}>
-        <p>This email already belongs to a DevFlow account. Sign in with it instead.</p>
-      </Message>
-    );
-  }
-
   if (load.status === "error") {
     return (
       <Message
@@ -161,7 +165,9 @@ function AcceptInvite({ token }: { token: string }) {
   }
 
   const { invite } = load;
-  const role = ROLES.find((r) => r.id === invite.role);
+
+  // The email already has an account: it signs in and joins instead of creating one.
+  if (invite.accountExists) return <JoinInvite token={token} invite={invite} onInvalid={() => setLoad({ status: "invalid" })} />;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -180,10 +186,8 @@ function AcceptInvite({ token }: { token: string }) {
     } catch (error) {
       setPending(false);
       if (error instanceof ApiError && error.code === "INVITE_INVALID") return setLoad({ status: "invalid" });
-      // EMAIL_TAKEN: the email signed up in the meantime, so it has to sign in instead.
-      if (error instanceof ApiError && (error.code === "EMAIL_TAKEN" || error.code === "ALREADY_MEMBER")) {
-        return setLoad({ status: "already-member" });
-      }
+      // EMAIL_TAKEN: the email signed up in the meantime, so it signs in and joins instead.
+      if (error instanceof ApiError && error.code === "EMAIL_TAKEN") return setLoad({ status: "ready", invite: { ...invite, accountExists: true } });
       const fields = fieldErrors(error);
       if (fields.name || fields.password) setErrors({ name: fields.name, password: fields.password });
       else setFormError(errorMessage(error));
@@ -192,12 +196,7 @@ function AcceptInvite({ token }: { token: string }) {
 
   return (
     <>
-      <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Join {invite.workspace.name}</h1>
-      <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
-        {invite.invitedBy?.name ?? "An admin"} invited <span className="text-zinc-300">{invite.email}</span> as{" "}
-        <span className="text-zinc-300">{role?.label ?? invite.role}</span>
-        {role && <> ({role.description.toLowerCase()})</>}. The invite expires {formatDate(invite.expiresAt)}.
-      </p>
+      <InviteHeading invite={invite} />
 
       <form noValidate onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
         <Field id="invite-name" label="Full name" error={errors.name}>
@@ -253,6 +252,161 @@ function AcceptInvite({ token }: { token: string }) {
           {!pending && <ArrowRight aria-hidden className="size-4" />}
         </Button>
       </form>
+    </>
+  );
+}
+
+/** "Join Acme Inc" and who invited which email, with which role, until when. */
+function InviteHeading({ invite }: { invite: InvitePreview }) {
+  const role = ROLES.find((r) => r.id === invite.role);
+  return (
+    <>
+      <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Join {invite.workspace.name}</h1>
+      <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
+        {invite.invitedBy?.name ?? "An admin"} invited <span className="text-zinc-300">{invite.email}</span> as{" "}
+        <span className="text-zinc-300">{role?.label ?? invite.role}</span>
+        {role && <> ({role.description.toLowerCase()})</>}. The invite expires {formatDate(invite.expiresAt)}.
+      </p>
+    </>
+  );
+}
+
+const sameEmail = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * The invited email already has an account: sign in with it (this page is the way back), then join with one click.
+ * Signed in as someone else, or as a shared demo account, the page explains and offers to switch accounts.
+ */
+function JoinInvite({ token, invite, onInvalid }: { token: string; invite: InvitePreview; onInvalid: () => void }) {
+  const router = useRouter();
+  const session = useSession();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mismatch, setMismatch] = useState(false);
+  const loginHref = loginThenInvite(token);
+  const workspaceName = invite.workspace.name;
+
+  async function switchAccount() {
+    setPending(true);
+    await signOut().catch(() => {});
+    router.push(loginHref);
+  }
+
+  async function join() {
+    setPending(true);
+    setError(null);
+    try {
+      const workspace = await joinInvite(token);
+      await reloadSession(); // the switcher lists it now
+      router.push(workspacePath(workspace.slug));
+    } catch (e) {
+      setPending(false);
+      if (e instanceof ApiError && e.code === "INVITE_INVALID") return onInvalid();
+      if (e instanceof ApiError && e.code === "INVITE_EMAIL_MISMATCH") return setMismatch(true);
+      if (e instanceof ApiError && e.code === "ALREADY_MEMBER") {
+        await reloadSession();
+        return router.push(workspacePath(invite.workspace.slug));
+      }
+      setError(errorMessage(e));
+    }
+  }
+
+  if (session.status === "loading") return <InviteSkeleton />;
+
+  if (session.status === "error") {
+    return (
+      <Message
+        icon={<CircleAlert aria-hidden className="size-4 text-red-400" />}
+        title="We couldn't check your sign-in"
+        action={
+          <Button variant="secondary" size="lg" className="w-full" onClick={() => void checkSession()}>
+            Try again
+          </Button>
+        }
+      >
+        <p role="alert">{errorMessage(session.error)}</p>
+      </Message>
+    );
+  }
+
+  if (session.status !== "signed-in") {
+    return (
+      <>
+        <InviteHeading invite={invite} />
+        <div className="mt-6 flex flex-col gap-3">
+          <p className="flex items-start gap-2 rounded-lg border border-line bg-canvas/40 px-3 py-2.5 text-[12.5px] leading-relaxed text-zinc-400">
+            <UserCheck aria-hidden className="mt-px size-3.5 shrink-0 text-emerald-400" />
+            <span>
+              <span className="text-zinc-200">{invite.email}</span> already has a DevFlow account. Sign in with it and you&apos;ll
+              come back here to join.
+            </span>
+          </p>
+          <Link href={loginHref} className={buttonStyles({ variant: "primary", size: "lg", className: "w-full" })}>
+            <LogIn aria-hidden className="size-4" />
+            Sign in to join
+          </Link>
+        </div>
+      </>
+    );
+  }
+
+  const { user } = session;
+
+  if (session.workspaces.some((w) => w.slug === invite.workspace.slug)) {
+    return (
+      <Message
+        icon={<UserCheck aria-hidden className="size-4 text-emerald-400" />}
+        title={`You're already in ${workspaceName}`}
+        action={
+          <Link href={workspacePath(invite.workspace.slug)} className={buttonStyles({ variant: "primary", size: "lg", className: "w-full" })}>
+            Open {workspaceName}
+            <ArrowRight aria-hidden className="size-4" />
+          </Link>
+        }
+      >
+        <p>This invite isn&apos;t needed: your account is already a member.</p>
+      </Message>
+    );
+  }
+
+  if (mismatch || !sameEmail(user.email, invite.email) || user.isDemo) {
+    return (
+      <Message
+        icon={<UserRoundX aria-hidden className="size-4 text-amber-400" />}
+        title={user.isDemo ? "Demo accounts can't join workspaces" : "This invite is for another account"}
+        action={
+          <Button variant="primary" size="lg" className="w-full" loading={pending} onClick={() => void switchAccount()}>
+            Sign out and use {invite.email}
+          </Button>
+        }
+      >
+        <p>
+          You&apos;re signed in as <span className="text-zinc-200">{user.email}</span>
+          {user.isDemo ? ", a shared demo account." : "."} The invite to {workspaceName} is for{" "}
+          <span className="text-zinc-200">{invite.email}</span> and stays valid until {formatDate(invite.expiresAt)}.
+        </p>
+      </Message>
+    );
+  }
+
+  return (
+    <>
+      <InviteHeading invite={invite} />
+      <div className="mt-6 flex flex-col gap-3">
+        <p className="text-[12.5px] text-zinc-400">
+          Signed in as <span className="text-zinc-200">{user.email}</span>. Your other workspaces stay as they are.
+        </p>
+        {error && (
+          <p role="alert" className="flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-[12px] text-red-300">
+            <CircleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+            {error}
+          </p>
+        )}
+        <Button variant="primary" size="lg" className="w-full" loading={pending} onClick={() => void join()}>
+          Join {workspaceName}
+          {!pending && <ArrowRight aria-hidden className="size-4" />}
+        </Button>
+      </div>
     </>
   );
 }

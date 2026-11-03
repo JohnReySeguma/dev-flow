@@ -121,7 +121,7 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Workspaces:** every page of a workspace lives under `/w/<slug>/…`. The sidebar switcher lists your workspaces with your role in each and creates new ones (optionally with sample projects); `/welcome` greets accounts without any. The app reopens the workspace you used last if it is still yours. Old links like `/projects` redirect into it.
 - **Workspace settings:** admins rename (the URL stays) and delete a workspace; anyone can leave it. Losing access, here or from another tab, moves you to another workspace.
 - **Profile:** your profile and personal access tokens; each token works in one workspace, picked when you generate it.
-- **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation. Sign-up opens your new workspace; accepting an invite opens the inviting one.
+- **Team:** Workspace settings lists the real members and pending invites; admins invite (emailed links open the new `/invite` page), resend, change roles and remove members after a confirmation. Sign-up opens your new workspace; accepting an invite opens the inviting one. People who already have an account sign in from the invite and join with one click, keeping their other workspaces.
 - **Projects, boards and backlogs:** each workspace's projects, workflow columns, sprints and issues load from the API when you open it (switching workspaces loads the other one). Creating, editing, dragging, ranking and deleting issues, editing columns and projects, and planning, starting and completing sprints all save to the server. Changes show at once; if the server refuses one, the project reloads and a notice says why.
 - **Reports:** the burndown, velocity and sprint history come from the API, which counts from the issue history (re-estimated, reopened and removed issues included); they refresh after your changes reach the server.
 - **Comments:** the issue panel lists an issue's comments; members and admins add new ones.
@@ -130,7 +130,7 @@ Next.js bakes `NEXT_PUBLIC_*` values into the bundle when `next dev` or `next bu
 - **Demo data:** the shared `acme-inc` workspace can't be renamed, deleted or left and its team is fixed, but its sample data can still be reset. The five demo accounts are read-only for profile and tokens: sign up to try those.
 - **Permissions:** controls follow your role in the current workspace. Viewers get a read-only app; members can do everything except editing workflows, deleting projects and managing the team, which stay with admins.
 
-Live Sync, invites for existing accounts and email verification come in later steps ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
+Live Sync and email verification come in later steps ([`docs/API_BRIEF.md`](docs/API_BRIEF.md) §5). The server caches `/config` for 5 minutes, so after changing the API's providers do a hard reload or use a private window.
 
 With the API's demo data, sign in as `demo@devflow.local` (admin), `member@devflow.local` or `viewer@devflow.local`, password `devflow-demo`. Ten wrong passwords lock an email for 15 minutes.
 
