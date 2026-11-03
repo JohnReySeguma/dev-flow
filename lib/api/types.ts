@@ -80,3 +80,6 @@ export type Burndown = Schemas["Burndown"];
 export type Velocity = Schemas["Velocity"];
 /** Completed sprints, newest first, paged. */
 export type SprintHistory = Schemas["SprintHistory"];
+
+/** `{ enabled, installations: [{ installationId, account, linkedAt }] }` for a workspace. */
+export type GitHubStatus = Schemas["GitHubStatus"];

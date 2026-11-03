@@ -1,8 +1,10 @@
 import { apiFetch } from "./client";
+import { API_URL } from "./config";
 import type {
   AcceptInviteRequest,
   AuthMe,
   CreateWorkspaceRequest,
+  GitHubStatus,
   InvitePreview,
   InviteRequest,
   Role,
@@ -84,3 +86,19 @@ export const joinInvite = (token: string) => apiFetch<Workspace>(`${invitePath(t
 /** `201`: a new account in that workspace, signed in. `EMAIL_TAKEN` if the email already has an account. */
 export const acceptInvite = (token: string, body: AcceptInviteRequest) =>
   apiFetch<AuthMe>(`${invitePath(token)}/accept`, { method: "POST", body });
+
+/* ------------------------------------------------------------------- github */
+
+/** Any member: whether the server can link GitHub, and the installations linked to this workspace. */
+export const getGitHubStatus = (slug: string) => apiFetch<GitHubStatus>(ws(slug, "/integrations/github"));
+
+/**
+ * Admins: where to send the browser (a navigation, never a fetch) to install the GitHub App and link it here. The API
+ * comes back to `redirect` with `?github=linked` or `?github_error=<code>`.
+ */
+export const gitHubInstallUrl = (slug: string, redirect: string) =>
+  `${API_URL}${ws(slug, "/integrations/github/install")}?redirect=${encodeURIComponent(redirect)}`;
+
+/** Admins. The app stays installed on GitHub; uninstalling it there disconnects it too. */
+export const disconnectGitHub = (slug: string, installationId: number) =>
+  apiFetch<void>(ws(slug, `/integrations/github/installations/${installationId}`), { method: "DELETE" });
