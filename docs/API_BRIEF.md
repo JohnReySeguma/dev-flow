@@ -17,9 +17,9 @@ not change: same screens, same flows. What changes is where data comes from, plu
 permission states that a real server introduces.
 
 The API ships in milestones (§5). Each time a backend release lands, integrate exactly what it adds, release the
-frontend, and stop. Steps 1–3 are done (frontend `v1.1.0`–`v1.3.0`, on API v1). **API v2** makes DevFlow
-multi-workspace: everything moves to `/api/v2` and under `/workspaces/{slug}`, so the remaining steps (§5) start with
-moving to v2 (Step 4, §7).
+frontend, and stop. Steps 1–9 are done (frontend `v1.1.0`–`v1.9.0`; Steps 1–3 on API v1, the rest on API v2,
+which makes DevFlow multi-workspace under `/api/v2/workspaces/{slug}`). API `v2.0.0` is the stable contract: only
+Step 10 remains.
 
 ## 2. Ground rules
 
@@ -123,9 +123,9 @@ v1's projects, sprints and Live Sync steps were never integrated and are folded 
 | 7 ✅ | `v2.0.0-beta.3` ✅ | `v1.7.0`         | Invites for people who already have an account: the `/invite` page asks them to sign in and join instead of creating an account; the new workspace appears in the switcher.                                                                                               |
 | 8 ✅ | `v2.0.0-beta.4` ✅ | `v1.8.0`         | Email verification (verify page, "verify your email" banner, resend; unverified users cannot invite), `RATE_LIMITED` handling (INTEGRATION §4.1) including the limit on creating workspaces.                                                                              |
 | 9 ✅ | `v2.0.0-beta.5` ✅ | `v1.9.0`         | Live Sync per workspace: join `{ workspace, projectKey }`, apply events, ignore your own `actorId`, re-fetch after reconnecting; presence avatars; `Issue.git` badges; connecting a GitHub App installation in workspace settings.                                        |
-| 10   | `v2.0.0`           | `v2.0.0`         | Final contract review; API mode becomes the default.                                                                                                                                                                                                                      |
+| 10   | `v2.0.0` ✅        | `v2.0.0`         | Final contract review; API mode becomes the default.                                                                                                                                                                                                                      |
 
-Steps 4–6 need only `beta.2`, so they can go ahead while the API works on `beta.3`. Each API release's
+API `v2.0.0` changes nothing since `beta.5`: it makes that contract stable. Each API release's
 entry in `../DevFlow-be/CHANGELOG.md` has a **Frontend impact** section that is the authoritative list for that step. Exact paths,
 payloads and examples are in `../DevFlow-be/docs/INTEGRATION.md` and Swagger UI.
 
