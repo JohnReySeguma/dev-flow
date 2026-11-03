@@ -166,7 +166,7 @@ All API access lives in [`lib/api/`](lib/api/):
 | `schema.d.ts` | Types generated from the API's OpenAPI spec; never edit by hand |
 | `types.ts` | Readable names for the generated types |
 
-The types are generated from the API's spec at tag **`v2.0.0-beta.5`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. Regenerate when a later API release changes its spec: update the tag in the `api:types` script, then run
+The types are generated from the API's spec at tag **`v2.0.0`**, the same file as the [`docs/openapi.json`](docs/openapi.json) snapshot. Regenerate when a later API release changes its spec: update the tag in the `api:types` script, then run
 
 ```bash
 npm run api:types

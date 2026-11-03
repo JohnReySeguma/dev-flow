@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "api:types": "openapi-typescript https://raw.githubusercontent.com/JohnReySeguma/dev-flow-be/v2.0.0-beta.5/docs/openapi.json -o lib/api/schema.d.ts"
+    "api:types": "openapi-typescript https://raw.githubusercontent.com/JohnReySeguma/dev-flow-be/v2.0.0/docs/openapi.json -o lib/api/schema.d.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
