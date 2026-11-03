@@ -5,6 +5,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-11-03
+
+### Fixed
+
+- "Create workspace" from the sidebar switcher kept its button spinning after the workspace was created and opened; the dialog now closes.
+- `next dev` no longer reports the signed-in pages as dropped segments it couldn't validate for instant navigation. They render behind the browser-only session and workspace gates, so the signed-in layouts and pages export `instant = false`; the public site and sign-in pages keep the default validation.
+
 ## [2.0.0] - 2026-11-03
 
 Step 10 of the API integration: the final contract review against API `v2.0.0`, the stable contract (unchanged since `beta.5`). DevFlow now runs on the API by default.
@@ -200,6 +207,7 @@ Step 1 of the API integration (API `v0.1.0` features, types from the API's `v1.0
 - `cn()` class merging and hydration-safe date helpers.
 - Team member model.
 
+[2.0.1]: https://github.com/JohnReySeguma/dev-flow/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/JohnReySeguma/dev-flow/compare/v1.7.0...v1.8.0
